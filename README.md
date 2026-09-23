@@ -24,7 +24,7 @@ npm run bench:report
 
 `bench:report` só aceita 10× com `bench/baseline.json` gravado por `npm run bench:baseline` (`source: measured`). Sem isso o report mede qualidade e `generated_tokens === 0`.
 
-Último bench nesta VM (Qwen3-0.6B Q8, CPU, sem baseline medido): `generated_tokens === 0`, p50 ~200 ms, authored ~0.60. O gate 0,75 ainda não passou — a escada 2B/4B é o próximo passo de qualidade, não uma API.
+Último bench nesta VM (Qwen3-0.6B Q8, CPU, sem baseline medido): `generated_tokens === 0`, p50 ~270 ms, **authored 0,775**, held-out 0,70. O gate de qualidade (0,75) passou. O 10× de tokens/tempo ainda precisa de `bench/baseline.json` medido (`npm run bench:baseline`). Escada `DECIDIR_TIER=1.7B|4B` se quiseres repetir o ouro noutro GGUF.
 
 ## Presets
 
