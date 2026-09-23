@@ -9,6 +9,9 @@ describe("cursor-store", () => {
     expect(matchHopId("Change the default auto threshold")).toBe("file-01");
     expect(matchHopId("export function add(a,b){return a+b}")).toBe("commit-01");
     expect(matchHopId("hello")).toBeUndefined();
+    expect(
+      matchHopId("rm -rf node_modules /tmp/build\nWhere is the login form rendered?")
+    ).toBeUndefined();
   });
 
   it("uses user createdAt → lastUpdatedAt as the hop clock", () => {

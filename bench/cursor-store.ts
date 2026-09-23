@@ -50,8 +50,13 @@ export function bubbleText(bubble: Record<string, unknown>): string {
   return parts.join("\n");
 }
 
+export function matchedHopIds(userText: string): HopId[] {
+  return HOP_IDS.filter((id) => userText.includes(HOP_FINGERPRINTS[id]));
+}
+
 export function matchHopId(userText: string): HopId | undefined {
-  return HOP_IDS.find((id) => userText.includes(HOP_FINGERPRINTS[id]));
+  const ids = matchedHopIds(userText);
+  return ids.length === 1 ? ids[0] : undefined;
 }
 
 export function hopLatencyMs(row: {
