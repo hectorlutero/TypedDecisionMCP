@@ -11,8 +11,8 @@ export type OptionSpec = {
 export function optionSpecs(question: Question): OptionSpec[] {
   if (question.type === "yesno") {
     return [
-      { key: "yes", label: "yes", description: "yes" },
-      { key: "no", label: "no", description: "no" }
+      { key: "yes", label: "A", description: "yes" },
+      { key: "no", label: "B", description: "no" }
     ];
   }
   if (question.type === "choice") {
@@ -24,7 +24,7 @@ export function optionSpecs(question: Question): OptionSpec[] {
   }
   return question.criteria.map((description, i) => ({
     key: String(i),
-    label: String(i),
+    label: LETTERS[i] ?? String(i),
     description
   }));
 }
@@ -32,16 +32,36 @@ export function optionSpecs(question: Question): OptionSpec[] {
 export function buildPrompt(stateText: string, question: Question, options: OptionSpec[]): string {
   const lines = options.map((opt) => `${opt.label} - ${opt.description}`);
   return [
+    "Classify the state. Reply with exactly one option label.",
+    "",
     "State:",
     stateText,
     "",
     "Question:",
     question.instructions,
     "",
-    "Options (answer with exactly one label token):",
+    "Options:",
     ...lines,
     "",
-    "Answer:"
+    "Reply with exactly one label."
+  ].join("\n");
+}
+
+/** Qwen3 chat envelope with an empty think block so the next token is the label. */
+export function wrapForModel(body: string): string {
+  return [
+    "<|im_start|>system",
+    "You are a classifier. Reply with exactly one option label token. No punctuation. No explanation.",
+    "<|im_end|>",
+    "<|im_start|>user",
+    body,
+    "/no_think",
+    "<|im_end|>",
+    "<|im_start|>assistant",
+    "<think>",
+    "",
+    "</think>",
+    ""
   ].join("\n");
 }
 

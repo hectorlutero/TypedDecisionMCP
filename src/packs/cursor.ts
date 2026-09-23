@@ -19,34 +19,34 @@ export const PACKS: Record<Exclude<Preset, "pacote">, Questions> = {
     comando: {
       type: "yesno",
       instructions:
-        "Este comando de shell é destrutivo (apaga, force-push, drop, overwrite irrecuperável)?"
+        "Is this shell command destructive (deletes data, force-push, drop, irrecoverable overwrite)?"
     }
   },
   subagente: {
     subagente: {
       type: "choice",
-      instructions: "Qual subagent_type do Cursor deve correr este pedido?",
+      instructions: "Which Cursor subagent_type should run this request?",
       criteria: { ...SUBAGENTES }
     }
   },
   diff: {
     diff: {
       type: "yesno",
-      instructions: "O diff cobre o pedido do utilizador, sem trabalho extra não pedido?"
+      instructions: "Does this diff cover the user's request, with no extra unrequested work?"
     }
   },
   ficheiro: {
     ficheiro: {
       type: "choice",
-      instructions: "Qual destes caminhos é o sítio certo para a mudança?",
+      instructions: "Which of these paths is the right place for this change?",
       criteria: { _placeholder: "replaced at resolve time" }
     }
   },
   commit: {
     commit: {
       type: "score",
-      instructions: "Quão pronto está este diff para commit?",
-      criteria: ["falta teste", "review", "pronto"]
+      instructions: "How ready is this diff to commit? Pick the single best label.",
+      criteria: ["missing tests — not ready", "needs review — tests exist but review is open", "ready to commit — tests and review are done"]
     }
   }
 };
@@ -62,7 +62,7 @@ function ficheiroQuestions(state: State): Questions {
   return {
     ficheiro: {
       type: "choice",
-      instructions: "Qual destes caminhos é o sítio certo para a mudança?",
+      instructions: "Which of these paths is the right place for this change?",
       criteria: Object.fromEntries(candidates.map((path) => [path, path]))
     }
   };

@@ -3,15 +3,16 @@ import { getLlama, type Llama, type LlamaContext, type LlamaContextSequence, typ
 import {
   confidenceFromDistribution,
   DecideError,
-  normalizeProbabilities,
   renderState,
   type Answer,
   type Answers,
+  type Question,
   type Questions,
   type State
 } from "../contract.js";
-import { defaultModelPath, MODEL_ID } from "../model-path.js";
-import { buildPrompt, optionSpecs, type OptionSpec } from "./prompt.js";
+import { modelId, resolveModelPath } from "../model-path.js";
+import { divideByPrior, optionMass, priorCacheKey } from "./calibrate.js";
+import { buildPrompt, optionSpecs, wrapForModel, type OptionSpec } from "./prompt.js";
 import { optionTokenIds } from "./tokenize.js";
 
 export type ScoreResult = {
@@ -49,14 +50,19 @@ function asProbList(raw: unknown): Array<{ token: number; probability: number }>
   return [];
 }
 
+function calibrateEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.DECIDIR_CALIBRATE !== "0";
+}
+
 export class LogitEngine implements DecisionEngine {
   private llama: Llama | undefined;
   private model: LlamaModel | undefined;
   private context: LlamaContext | undefined;
   private sequence: LlamaContextSequence | undefined;
   private readonly modelPath: string;
+  private readonly priors = new Map<string, Record<string, number>>();
 
-  constructor(modelPath = defaultModelPath()) {
+  constructor(modelPath = resolveModelPath()) {
     this.modelPath = modelPath;
   }
 
@@ -78,7 +84,7 @@ export class LogitEngine implements DecisionEngine {
 
   private async warmup(): Promise<void> {
     const seq = this.requireSequence();
-    const tokens = this.requireModel().tokenize("warmup\nAnswer:");
+    const tokens = this.tokenizePrompt("warmup\n");
     await seq.evaluateWithoutGeneratingNewTokens(tokens);
     seq.clearHistory();
   }
@@ -100,21 +106,50 @@ export class LogitEngine implements DecisionEngine {
           optionTokenIds({ tokenize: (text) => model.tokenize(text) as number[] }, opt.label)
         ])
       );
-      const prompt = buildPrompt(stateText, question, options);
-      const tokens = model.tokenize(prompt);
+      const prompt = wrapForModel(buildPrompt(stateText, question, options));
+      const tokens = this.tokenizePrompt(prompt);
       promptTokens += tokens.length;
 
       seq.clearHistory();
       const probs = await this.nextTokenProbs(tokens);
-      answers[id] = toAnswer(question.type, options, tokensByKey, probs);
+      const actual = optionMass(options.map((opt) => opt.key), tokensByKey, (token) => probs.get(token)?.probability ?? 0);
+      const prior = calibrateEnabled()
+        ? await this.priorFor(question, options, tokensByKey)
+        : Object.fromEntries(options.map((opt) => [opt.key, 1]));
+      answers[id] = toAnswer(question.type, options, divideByPrior(actual, prior));
     }
 
     return {
       answers,
-      model: MODEL_ID,
+      model: modelId(),
       usage: { prompt_tokens: promptTokens, generated_tokens: 0 },
       latency_ms: performance.now() - started
     };
+  }
+
+  private tokenizePrompt(prompt: string) {
+    return this.requireModel().tokenize(prompt, true);
+  }
+
+  private async priorFor(
+    question: Question,
+    options: OptionSpec[],
+    tokensByKey: Record<string, number[]>
+  ): Promise<Record<string, number>> {
+    const key = priorCacheKey(
+      question.instructions,
+      options.map((opt) => ({ key: opt.key, label: opt.label }))
+    );
+    const cached = this.priors.get(key);
+    if (cached) return cached;
+
+    const prompt = wrapForModel(buildPrompt("(empty)", question, options));
+    const tokens = this.tokenizePrompt(prompt);
+    this.requireSequence().clearHistory();
+    const probs = await this.nextTokenProbs(tokens);
+    const prior = optionMass(options.map((opt) => opt.key), tokensByKey, (token) => probs.get(token)?.probability ?? 0);
+    this.priors.set(key, prior);
+    return prior;
   }
 
   private async nextTokenProbs(tokens: number[]): Promise<ProbMap> {
@@ -139,6 +174,7 @@ export class LogitEngine implements DecisionEngine {
   }
 
   async dispose(): Promise<void> {
+    this.priors.clear();
     this.sequence = undefined;
     await this.context?.dispose();
     this.context = undefined;
@@ -162,17 +198,8 @@ export class LogitEngine implements DecisionEngine {
 function toAnswer(
   type: "yesno" | "choice" | "score",
   options: OptionSpec[],
-  tokensByKey: Record<string, number[]>,
-  probs: ProbMap
+  normalized: Record<string, number>
 ): Answer {
-  const raw: Record<string, number> = {};
-  for (const opt of options) {
-    raw[opt.key] = (tokensByKey[opt.key] ?? []).reduce(
-      (sum, token) => sum + (probs.get(token)?.probability ?? 0),
-      0
-    );
-  }
-  const normalized = normalizeProbabilities(raw);
   if (type === "yesno") {
     return { type: "yesno", yes: normalized.yes ?? 0 };
   }
