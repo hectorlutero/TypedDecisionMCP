@@ -4,12 +4,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   composerFromRows,
-  resolveCursorDb,
+  skipReason,
   toHopHit,
+  resolveCursorDb,
+  type CursorComposer,
   type CursorHopHit
 } from "./cursor-store.js";
+import { readSince } from "./ui-since.js";
 
-const RECENT_COMPOSERS = 80;
+const RECENT_COMPOSERS = 120;
+const SINCE_SLACK_MS = 5 * 60 * 1000;
+
+export type CursorSkip = { composerId: string; reason: string };
 
 function sqlQuote(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
@@ -19,10 +25,10 @@ function sqliteToFile(db: string, sql: string): string {
   const out = join(tmpdir(), `td-sql-${process.pid}-${Math.random().toString(16).slice(2)}.json`);
   const fd = openSync(out, "w");
   try {
-    execFileSync("sqlite3", ["-readonly", "-json", dbUri(db), sql], {
+    execFileSync("sqlite3", ["-readonly", "-json", db, sql], {
       stdio: ["ignore", fd, "pipe"],
-      maxBuffer: 4 * 1024 * 1024,
-      timeout: 20_000
+      maxBuffer: 8 * 1024 * 1024,
+      timeout: 15_000
     });
   } finally {
     closeSync(fd);
@@ -30,10 +36,6 @@ function sqliteToFile(db: string, sql: string): string {
   const raw = readFileSync(out, "utf8").trim();
   unlinkSync(out);
   return raw;
-}
-
-function dbUri(db: string): string {
-  return `file:${db}?mode=ro`;
 }
 
 function sqliteJson(db: string, sql: string): unknown[] {
@@ -56,6 +58,13 @@ function composerIdFromKey(key: string, prefix: string): string {
   return key.startsWith(prefix) ? key.slice(prefix.length) : key;
 }
 
+function afterSince(composer: CursorComposer, since: number): boolean {
+  if (!since) return true;
+  const stamp = composer.lastUpdatedAt ?? composer.createdAt ?? composer.assistantCreatedAt ?? composer.userCreatedAt;
+  if (stamp == null) return true;
+  return stamp >= since - SINCE_SLACK_MS;
+}
+
 export function openCursorDb(): string {
   const override = process.env.CURSOR_VSCDB;
   if (override && existsSync(override)) return override;
@@ -76,25 +85,47 @@ export function listRecentComposerIds(dbPath: string, limit = RECENT_COMPOSERS):
   return rows.map((row) => composerIdFromKey(row.key, "composerData:"));
 }
 
-export function readCursorHopHits(dbPath = openCursorDb()): CursorHopHit[] {
+function readComposer(dbPath: string, composerId: string): CursorComposer {
+  const headerRows = sqliteJson(
+    dbPath,
+    `SELECT value FROM cursorDiskKV WHERE key = ${sqlQuote(`composerData:${composerId}`)}`
+  ) as Array<{ value: string }>;
+  const bubbleRows = sqliteJson(
+    dbPath,
+    `SELECT value FROM cursorDiskKV WHERE key LIKE ${sqlQuote(`bubbleId:${composerId}:%`)}`
+  ) as Array<{ value: string }>;
+  return composerFromRows(
+    composerId,
+    parseValue(headerRows[0]?.value),
+    bubbleRows.map((row) => parseValue(row.value))
+  );
+}
+
+export function readCursorScan(dbPath = openCursorDb()): { hits: CursorHopHit[]; skipped: CursorSkip[] } {
+  const since = readSince();
   const composerIds = listRecentComposerIds(dbPath);
   const hits: CursorHopHit[] = [];
+  const skipped: CursorSkip[] = [];
   for (const composerId of composerIds) {
-    const headerRows = sqliteJson(
-      dbPath,
-      `SELECT value FROM cursorDiskKV WHERE key = ${sqlQuote(`composerData:${composerId}`)}`
-    ) as Array<{ value: string }>;
-    const bubbleRows = sqliteJson(
-      dbPath,
-      `SELECT value FROM cursorDiskKV WHERE key LIKE ${sqlQuote(`bubbleId:${composerId}:%`)}`
-    ) as Array<{ value: string }>;
-    const composer = composerFromRows(
-      composerId,
-      parseValue(headerRows[0]?.value),
-      bubbleRows.map((row) => parseValue(row.value))
-    );
-    const hit = toHopHit(composer);
-    if (hit) hits.push(hit);
+    try {
+      const composer = readComposer(dbPath, composerId);
+      if (!afterSince(composer, since)) {
+        skipped.push({ composerId, reason: "chat anterior ao reset" });
+        continue;
+      }
+      const hit = toHopHit(composer);
+      if (hit) hits.push(hit);
+      else skipped.push({ composerId, reason: skipReason(composer) ?? "ignorado" });
+    } catch (err) {
+      skipped.push({
+        composerId,
+        reason: err instanceof Error ? err.message.slice(0, 120) : "erro a ler"
+      });
+    }
   }
-  return hits;
+  return { hits, skipped };
+}
+
+export function readCursorHopHits(dbPath = openCursorDb()): CursorHopHit[] {
+  return readCursorScan(dbPath).hits;
 }

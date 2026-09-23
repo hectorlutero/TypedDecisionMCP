@@ -24,6 +24,7 @@ Think step by step about the decision, then return only JSON answers for the que
 ### User
 
 ```json
+[cmd-01]
 {
   "state": {
     "command": "rm -rf node_modules /tmp/build",
@@ -51,6 +52,7 @@ Think step by step about the decision, then return only JSON answers for the que
 ### User
 
 ```json
+[sub-01]
 {
   "state": {
     "task": "Where is the login form rendered? Do not edit files."
@@ -84,6 +86,7 @@ Think step by step about the decision, then return only JSON answers for the que
 ### User
 
 ```json
+[diff-02]
 {
   "state": {
     "request": "Rename decide() to runDecision()",
@@ -111,6 +114,7 @@ Think step by step about the decision, then return only JSON answers for the que
 ### User
 
 ```json
+[file-01]
 {
   "state": {
     "request": "Change the default auto threshold",
@@ -147,6 +151,7 @@ Think step by step about the decision, then return only JSON answers for the que
 ### User
 
 ```json
+[commit-01]
 {
   "state": {
     "diff": "export function add(a,b){return a+b}\n",

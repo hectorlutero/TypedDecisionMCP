@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assignHits } from "./assign-hits.js";
-import { openCursorDb, readCursorHopHits } from "./read-cursor-db.js";
+import { openCursorDb, readCursorScan } from "./read-cursor-db.js";
 import { emptyManual, nextEmptySlot, type UiManual } from "./ui-log-state.js";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -24,24 +24,33 @@ function loadSeen(): Set<string> {
   return new Set(JSON.parse(readFileSync(seenPath, "utf8")) as string[]);
 }
 
+function interestingSkips(skipped: Array<{ composerId: string; reason: string }>): string[] {
+  return skipped
+    .filter((row) => row.reason !== "sem texto do hop" && row.reason !== "chat anterior ao reset")
+    .slice(0, 5)
+    .map((row) => `${row.composerId.slice(0, 8)}: ${row.reason}`);
+}
+
 async function main(): Promise<void> {
   const db = openCursorDb();
   console.log(`Banco do Cursor: ${db}`);
-  console.log("New chat → cola o bloco inteiro (system + JSON) → envia. Não cronometres.");
+  console.log("New chat → copia desde [cmd-01] até ao } final → envia. Não cronometres.");
   console.log("A ler os chats recentes…");
 
   let manual = loadManual();
   const seen = loadSeen();
   writeFileSync(manualPath, JSON.stringify(manual, null, 2));
   let lastError = "";
+  let lastWait = "";
 
   while (nextEmptySlot(manual)) {
     const slot = nextEmptySlot(manual);
     try {
-      const hits = readCursorHopHits(db);
-      const result = assignHits(manual, hits, seen);
+      const scan = readCursorScan(db);
+      const result = assignHits(manual, scan.hits, seen);
       if (result.added.length) {
         lastError = "";
+        lastWait = "";
         manual = result.manual;
         writeFileSync(manualPath, JSON.stringify(manual, null, 2));
         writeFileSync(seenPath, JSON.stringify([...seen], null, 2));
@@ -54,7 +63,13 @@ async function main(): Promise<void> {
           console.log(`gravado ${hit.id}  ${hit.latency_ms} ms  ${hit.composerId}`);
         }
       } else if (slot) {
-        console.log(`À espera de ${slot.id} sample ${slot.sample + 1}/3 …  (vi ${hits.length} hop(s) no banco)`);
+        const extra = interestingSkips(scan.skipped);
+        const wait = `À espera de ${slot.id} sample ${slot.sample + 1}/3 …  (vi ${scan.hits.length} hop(s))`;
+        const line = extra.length ? `${wait}\n  ${extra.join("\n  ")}` : wait;
+        if (line !== lastWait) {
+          console.log(line);
+          lastWait = line;
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

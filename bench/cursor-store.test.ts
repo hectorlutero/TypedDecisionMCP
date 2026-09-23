@@ -8,10 +8,15 @@ describe("cursor-store", () => {
     expect(matchHopId("function decide() {\n  return 1;\n}")).toBe("diff-02");
     expect(matchHopId("Change the default auto threshold")).toBe("file-01");
     expect(matchHopId("export function add(a,b){return a+b}")).toBe("commit-01");
+    expect(matchHopId("[cmd-01]")).toBe("cmd-01");
     expect(matchHopId("hello")).toBeUndefined();
     expect(
       matchHopId("rm -rf node_modules /tmp/build\nWhere is the login form rendered?")
     ).toBeUndefined();
+  });
+
+  it("treats equal start and end as 1 ms", () => {
+    expect(hopLatencyMs({ createdAt: 50, lastUpdatedAt: 50 })).toBe(1);
   });
 
   it("uses user createdAt → lastUpdatedAt as the hop clock", () => {

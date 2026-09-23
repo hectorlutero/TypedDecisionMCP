@@ -50,8 +50,12 @@ export function bubbleText(bubble: Record<string, unknown>): string {
   return parts.join("\n");
 }
 
+export function textHasFingerprint(haystack: string, needle: string): boolean {
+  return haystack.includes(needle);
+}
+
 export function matchedHopIds(userText: string): HopId[] {
-  return HOP_IDS.filter((id) => userText.includes(HOP_FINGERPRINTS[id]));
+  return HOP_IDS.filter((id) => HOP_FINGERPRINTS[id].some((needle) => textHasFingerprint(userText, needle)));
 }
 
 export function matchHopId(userText: string): HopId | undefined {
@@ -69,8 +73,18 @@ export function hopLatencyMs(row: {
   const start = row.userCreatedAt ?? row.createdAt;
   if (end == null || start == null) return undefined;
   const ms = end - start;
+  if (ms === 0) return 1;
   if (!(ms > 0) || ms > 30 * 60 * 1000) return undefined;
   return ms;
+}
+
+export function skipReason(composer: CursorComposer): string | undefined {
+  const ids = matchedHopIds(composer.userText);
+  if (ids.length === 0) return "sem texto do hop";
+  if (ids.length > 1) return `vários hops (${ids.join(",")})`;
+  if (!composer.assistantText.trim()) return "ainda sem resposta";
+  if (hopLatencyMs(composer) == null) return "sem relógio";
+  return undefined;
 }
 
 export function toHopHit(composer: CursorComposer): CursorHopHit | undefined {
@@ -131,15 +145,16 @@ export function composerFromRows(
   })();
   return {
     composerId,
-    createdAt: parseMs(header.createdAt),
-    lastUpdatedAt: parseMs(header.lastUpdatedAt),
+    createdAt: parseMs(header.createdAt) ?? parseMs(header.created_at),
+    lastUpdatedAt:
+      parseMs(header.lastUpdatedAt) ?? parseMs(header.updatedAt) ?? parseMs(header.lastUpdatedAtMs),
     status: typeof header.status === "string" ? header.status : undefined,
     model: model || undefined,
     userText: [String(user ? bubbleText(user) : ""), headerBlob, typeof header.name === "string" ? header.name : ""].join(
       "\n"
     ),
     assistantText,
-    userCreatedAt: parseMs(user?.createdAt),
-    assistantCreatedAt: parseMs(firstAssistant?.createdAt)
+    userCreatedAt: parseMs(user?.createdAt) ?? parseMs(user?.timestamp),
+    assistantCreatedAt: parseMs(firstAssistant?.createdAt) ?? parseMs(firstAssistant?.timestamp)
   };
 }

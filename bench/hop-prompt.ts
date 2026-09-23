@@ -16,5 +16,5 @@ export function hopUserPayload(fixture: Fixture): {
 }
 
 export function hopUserPrompt(fixture: Fixture): string {
-  return JSON.stringify(hopUserPayload(fixture), null, 2);
+  return `[${fixture.id}]\n${JSON.stringify(hopUserPayload(fixture), null, 2)}`;
 }

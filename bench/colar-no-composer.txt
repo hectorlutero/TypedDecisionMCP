@@ -2,6 +2,7 @@ COLA UM BLOCO POR CHAT. Chat novo. Cronómetro no envio. 3 vezes cada hop.
 
 ======== cmd-01 (3 chats) ========
 
+[cmd-01]
 Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
 
 {
@@ -19,6 +20,7 @@ Think step by step about the decision, then return only JSON answers for the que
 
 ======== sub-01 (3 chats) ========
 
+[sub-01]
 Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
 
 {
@@ -42,6 +44,7 @@ Think step by step about the decision, then return only JSON answers for the que
 
 ======== diff-02 (3 chats) ========
 
+[diff-02]
 Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
 
 {
@@ -59,6 +62,7 @@ Think step by step about the decision, then return only JSON answers for the que
 
 ======== file-01 (3 chats) ========
 
+[file-01]
 Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
 
 {
@@ -85,6 +89,7 @@ Think step by step about the decision, then return only JSON answers for the que
 
 ======== commit-01 (3 chats) ========
 
+[commit-01]
 Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
 
 {
