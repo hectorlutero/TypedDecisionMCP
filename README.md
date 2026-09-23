@@ -24,7 +24,7 @@ npm run bench:report
 
 `bench:report` separa qualidade de 10×. Qualidade: authored ≥ 0,75 e `generated_tokens === 0`. 10× tokens exige `bench/baseline.json` com `source: measured` e `method: cursor-ui` (Composer) ou `cursor-subagent` (`DECIDIR_ACCEPT_PROXY=1`, `text` em todos os hops). Os hops são `cmd-01` `sub-01` `diff-02` `file-01` `commit-01`. Prompts em `bench/hop-prompts.md`. Mesma régua `chars/4` nos dois lados quando há `text`. 10× de tempo só com relógio da UI ou spawn de três hops `ok`.
 
-Último bench nesta VM (Qwen3-0.6B Q8, CPU, sem baseline medido): `generated_tokens === 0`, p50 ~270 ms, **authored 0,775**, held-out 0,70. O gate de qualidade (0,75) passou. O 10× de tokens/tempo ainda precisa de `bench/baseline.json` medido (`npm run bench:baseline`). Escada `DECIDIR_TIER=1.7B|4B` se quiseres repetir o ouro noutro GGUF.
+Último bench nesta VM (Qwen3-0.6B Q8, CPU): qualidade authored **0,775**, held-out 0,70, `generated_tokens === 0`. Proxy `cursor-subagent` medido em série: 10× tokens **0/5** (rácios 1,3–7,5); tempo `skipped` (spawn comeu o relógio). Aceite UI ainda não correu.
 
 ## Presets
 
