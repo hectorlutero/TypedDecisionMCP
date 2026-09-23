@@ -701,8 +701,14 @@ CI: testes + typecheck + grep de independência. `bench:logits` no CI **só** se
 
 ## Falhou (preencher só se A+A′+B não derem 34/40)
 
-| id | ouro | predito depois de A+A′+B | massa | nota |
-|---|---|---|---|---|
-| | | | | |
+**A2 (`roleForPath`) ficou.** `ficheiro` authored **8/8** (`file-02` 0,024 → ~1,0 em `src/index.ts`). A1 revertido (held-out 12/20). A′ revertido: yesno contrastivo mandou **todos** os gold-yes do `diff` para `no`. B **não** correu (A′ partido). G0: **0** labels de choice/score com massa 0 — G1 junta-se a F.
 
-Não overlay. Não 1.7B. Não C. Não esticar hop. O v1 de [PLAN.md](PLAN.md) continua o aceite de 0,75 / 10×.
+Authored depois de A (sem A′): **32–35/40** conforme a margem de `commit-05/08` e `diff-05`. Held-out **14–16/20**. 0,85 **não está estável**. v1 0,75 intacto. `comando` 8/8.
+
+| id | ouro | predito (A, sem A′) | nota |
+|---|---|---|---|
+| `sub-01` | `explore` | `cursor-guide` | A1 revertido |
+| `diff-02/04/08` | `no` | `yes` ~0,81 | A′ inverteu; revertido |
+| `commit-05` | `1` | oscila | margem; B4 não correu |
+
+Não overlay. Não 1.7B. Não C. Não esticar hop. O v1 de [PLAN.md](PLAN.md) continua o aceite de 0,75 / 10×. C (`cursor-ui`, n=3) e C5 ainda **não correram** — precisam do Composer.

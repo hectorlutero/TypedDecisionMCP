@@ -125,9 +125,9 @@ Think step by step about the decision, then return only JSON answers for the que
       "type": "choice",
       "instructions": "Which of these paths is the right place for this change?",
       "criteria": {
-        "src/policy.ts": "src/policy.ts",
-        "src/index.ts": "src/index.ts",
-        "README.md": "README.md"
+        "src/policy.ts": "auto / review / stop thresholds",
+        "src/index.ts": "process / stdio entrypoint",
+        "README.md": "GGUF fetch docs"
       }
     }
   }

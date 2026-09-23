@@ -14,6 +14,7 @@ import { modelId, resolveModelPath } from "../model-path.js";
 import { divideByPrior, optionMass, priorCacheKey } from "./calibrate.js";
 import { buildPrompt, optionSpecs, wrapForModel, type OptionSpec } from "./prompt.js";
 import { optionTokenIds } from "./tokenize.js";
+import { PACKS } from "../packs/cursor.js";
 
 export type ScoreResult = {
   answers: Answers;
@@ -77,9 +78,10 @@ export class LogitEngine implements DecisionEngine {
     }
     this.llama = await getLlama();
     this.model = await this.llama.loadModel({ modelPath: this.modelPath });
-    this.context = await this.model.createContext({ contextSize: 2048 });
+    this.context = await this.model.createContext({ contextSize: 512 });
     this.sequence = this.context.getSequence();
     await this.warmup();
+    await this.warmPriors();
   }
 
   private async warmup(): Promise<void> {
@@ -87,6 +89,22 @@ export class LogitEngine implements DecisionEngine {
     const tokens = this.tokenizePrompt("warmup\n");
     await seq.evaluateWithoutGeneratingNewTokens(tokens);
     seq.clearHistory();
+  }
+
+  private async warmPriors(): Promise<void> {
+    const model = this.requireModel();
+    const questions: Question[] = [PACKS.comando.comando, PACKS.commit.commit];
+    if (PACKS.diff.diff.type === "yesno") questions.push(PACKS.diff.diff);
+    for (const question of questions) {
+      const options = optionSpecs(question);
+      const tokensByKey = Object.fromEntries(
+        options.map((opt) => [
+          opt.key,
+          optionTokenIds({ tokenize: (text) => model.tokenize(text) as number[] }, opt.label)
+        ])
+      );
+      await this.priorFor(question, options, tokensByKey);
+    }
   }
 
   async score(state: State, questions: Questions): Promise<ScoreResult> {
