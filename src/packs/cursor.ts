@@ -32,11 +32,7 @@ export const PACKS: Record<Exclude<Preset, "pacote">, Questions> = {
   diff: {
     diff: {
       type: "yesno",
-      instructions: "Compare state.request to state.diff. Pick one label.",
-      options: {
-        yes: "the requested name, route, symbol, or env var is in the diff and there is no extra work",
-        no: "the requested name is missing or different, or the diff adds unrequested work"
-      }
+      instructions: "Does this diff cover the user's request, with no extra unrequested work?"
     }
   },
   ficheiro: {

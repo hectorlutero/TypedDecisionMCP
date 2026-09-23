@@ -38,14 +38,11 @@ describe("packs", () => {
     }
   });
 
-  it("keeps diff as yesno with contrastive options", () => {
+  it("keeps diff as yesno without custom options after A' revert", () => {
     const questions = resolveQuestions({ request: "x", diff: "y" }, "diff", undefined);
-    expect(questions.diff).toMatchObject({
+    expect(questions.diff).toEqual({
       type: "yesno",
-      options: {
-        yes: expect.stringContaining("requested name"),
-        no: expect.stringContaining("missing")
-      }
+      instructions: "Does this diff cover the user's request, with no extra unrequested work?"
     });
   });
 
