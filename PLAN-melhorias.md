@@ -497,6 +497,8 @@ Não é commit de produto. É o log que autoriza D1.
 
 Esperado: `cmd-01` 562 → ~260 ms; `commit-01` 508 → ~300 ms. p50 authored quase igual (já é quente). Qualidade nula se o wrap for o mesmo.
 
+**Medido depois de D1+D2:** `cmd-01` **234** ms; `diff-01` **258** ms; `commit-01` **289** ms. `contextSize: 512`. D3 (linha duplicada) não correu — authored ainda oscila 31–35/40.
+
 Health HTTP (`src/http.ts`): `warm: true` só **depois** deste warmup (priors + dummy). A primeira chamada do utilizador não deve ser o `init`.
 
 ### D2. `contextSize: 512`
