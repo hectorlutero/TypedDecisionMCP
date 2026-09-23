@@ -1,0 +1,6 @@
+---
+description: Call decidir for typed local ifs
+alwaysApply: true
+---
+
+When the hop is one of comando, subagente, diff, ficheiro, commit: call MCP tool `decidir`. Do not write the probability in prose. Read `action`: `auto` continue, `review` ask, `stop` do not execute.

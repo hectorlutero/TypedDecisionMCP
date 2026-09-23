@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "TypedDecisionMCP": {
+      "command": "node",
+      "args": ["${workspaceFolder}/dist/index.js"],
+      "env": {
+        "DECIDIR_MODEL": "${env:DECIDIR_MODEL}"
+      }
+    }
+  }
+}
