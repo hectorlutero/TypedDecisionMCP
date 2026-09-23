@@ -4,7 +4,7 @@ Repositório: [`hectorlutero/TypedDecisionMCP`](https://github.com/hectorlutero/
 
 MCP de **uma** tool (`decidir`) para o Cursor. Motor local: lê logits das opções. Sem TypeSafe. Sem JSON gerado no caminho de 10×.
 
-Alvo em [PLAN.md](PLAN.md): ≥ 10× menos tokens gerados e ≥ 10× menos tempo no hop de decisão, com accuracy ≥ 0,75 no ouro authored.
+Alvo v1 em [PLAN.md](PLAN.md): ≥ 10× menos tokens gerados e ≥ 10× menos tempo no hop de decisão, com accuracy ≥ 0,75 no ouro authored. Implementação do alvo seguinte (authored 0,85 e 15×) em [PLAN-melhorias.md](PLAN-melhorias.md).
 
 ## Uso
 
