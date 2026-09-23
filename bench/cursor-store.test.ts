@@ -22,6 +22,18 @@ describe("cursor-store", () => {
     ).toBe(4200);
   });
 
+  it("matches a hop when the prompt is only in richText", () => {
+    const composer = composerFromRows(
+      "rich",
+      { createdAt: 1, lastUpdatedAt: 2001 },
+      [
+        { type: 1, richText: "command: rm -rf node_modules /tmp/build" },
+        { type: 2, text: '{"comando":"yes"}' }
+      ]
+    );
+    expect(toHopHit(composer)?.id).toBe("cmd-01");
+  });
+
   it("builds a hop hit from composer bubbles", () => {
     const composer = composerFromRows(
       "fdf30a74-cdd5-4b41-9290-d1953a396980",

@@ -2,7 +2,6 @@ import { execFileSync } from "node:child_process";
 import { closeSync, existsSync, openSync, readFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { HOP_FINGERPRINTS } from "./hop-ids.js";
 import {
   composerFromRows,
   resolveCursorDb,
@@ -10,13 +9,7 @@ import {
   type CursorHopHit
 } from "./cursor-store.js";
 
-const SQL_NEEDLES = [
-  HOP_FINGERPRINTS["cmd-01"],
-  HOP_FINGERPRINTS["sub-01"],
-  "Rename decide() to runDecision()",
-  HOP_FINGERPRINTS["file-01"],
-  HOP_FINGERPRINTS["commit-01"]
-];
+const RECENT_COMPOSERS = 80;
 
 function sqlQuote(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
@@ -26,9 +19,10 @@ function sqliteToFile(db: string, sql: string): string {
   const out = join(tmpdir(), `td-sql-${process.pid}-${Math.random().toString(16).slice(2)}.json`);
   const fd = openSync(out, "w");
   try {
-    execFileSync("sqlite3", ["-readonly", "-json", db, sql], {
+    execFileSync("sqlite3", ["-readonly", "-json", dbUri(db), sql], {
       stdio: ["ignore", fd, "pipe"],
-      maxBuffer: 2 * 1024 * 1024
+      maxBuffer: 4 * 1024 * 1024,
+      timeout: 20_000
     });
   } finally {
     closeSync(fd);
@@ -36,6 +30,10 @@ function sqliteToFile(db: string, sql: string): string {
   const raw = readFileSync(out, "utf8").trim();
   unlinkSync(out);
   return raw;
+}
+
+function dbUri(db: string): string {
+  return `file:${db}?mode=ro`;
 }
 
 function sqliteJson(db: string, sql: string): unknown[] {
@@ -54,12 +52,8 @@ function parseValue(raw: unknown): Record<string, unknown> {
   }
 }
 
-function composerIdFromBubbleKey(key: string): string | undefined {
-  if (!key.startsWith("bubbleId:")) return undefined;
-  const rest = key.slice("bubbleId:".length);
-  const cut = rest.indexOf(":");
-  if (cut <= 0) return undefined;
-  return rest.slice(0, cut);
+function composerIdFromKey(key: string, prefix: string): string {
+  return key.startsWith(prefix) ? key.slice(prefix.length) : key;
 }
 
 export function openCursorDb(): string {
@@ -74,30 +68,31 @@ export function openCursorDb(): string {
   return found;
 }
 
-export function readCursorHopHits(dbPath = openCursorDb()): CursorHopHit[] {
-  const like = SQL_NEEDLES.map((needle) => `value LIKE '%' || ${sqlQuote(needle)} || '%'`).join(" OR ");
-  const keyRows = sqliteJson(
+export function listRecentComposerIds(dbPath: string, limit = RECENT_COMPOSERS): string[] {
+  const rows = sqliteJson(
     dbPath,
-    `SELECT key FROM cursorDiskKV WHERE key LIKE 'bubbleId:%' AND (${like})`
+    `SELECT key FROM cursorDiskKV WHERE key LIKE 'composerData:%' ORDER BY rowid DESC LIMIT ${limit}`
   ) as Array<{ key: string }>;
-  const composerIds = [...new Set(keyRows.map((row) => composerIdFromBubbleKey(row.key)).filter(Boolean))] as string[];
+  return rows.map((row) => composerIdFromKey(row.key, "composerData:"));
+}
+
+export function readCursorHopHits(dbPath = openCursorDb()): CursorHopHit[] {
+  const composerIds = listRecentComposerIds(dbPath);
   const hits: CursorHopHit[] = [];
   for (const composerId of composerIds) {
     const headerRows = sqliteJson(
       dbPath,
       `SELECT value FROM cursorDiskKV WHERE key = ${sqlQuote(`composerData:${composerId}`)}`
     ) as Array<{ value: string }>;
-    const bubbleKeys = sqliteJson(
+    const bubbleRows = sqliteJson(
       dbPath,
-      `SELECT key FROM cursorDiskKV WHERE key LIKE ${sqlQuote(`bubbleId:${composerId}:%`)}`
-    ) as Array<{ key: string }>;
-    const bubbles = bubbleKeys.map((row) => {
-      const one = sqliteJson(dbPath, `SELECT value FROM cursorDiskKV WHERE key = ${sqlQuote(row.key)}`) as Array<{
-        value: string;
-      }>;
-      return parseValue(one[0]?.value);
-    });
-    const composer = composerFromRows(composerId, parseValue(headerRows[0]?.value), bubbles);
+      `SELECT value FROM cursorDiskKV WHERE key LIKE ${sqlQuote(`bubbleId:${composerId}:%`)}`
+    ) as Array<{ value: string }>;
+    const composer = composerFromRows(
+      composerId,
+      parseValue(headerRows[0]?.value),
+      bubbleRows.map((row) => parseValue(row.value))
+    );
     const hit = toHopHit(composer);
     if (hit) hits.push(hit);
   }

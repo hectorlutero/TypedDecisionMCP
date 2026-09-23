@@ -39,6 +39,7 @@
     "bench:report": "tsx bench/report.ts",
     "bench:ui-log": "tsx bench/ui-log.ts",
     "bench:ui-watch": "tsx bench/ui-watch.ts",
+    "bench:ui-probe": "tsx bench/ui-probe.ts",
     "bench:ui-import": "tsx bench/import-cursor-ui.ts",
     "check:independent": "node scripts/check-independent.mjs"
   },

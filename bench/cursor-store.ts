@@ -36,6 +36,20 @@ export function resolveCursorDb(home = homedir(), env = process.env): string | u
   return cursorDbCandidates(home, env).find((path) => existsSync(path));
 }
 
+export function bubbleText(bubble: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const key of ["text", "richText", "rawText", "content", "markdown"]) {
+    const value = bubble[key];
+    if (typeof value === "string" && value.length > 0) parts.push(value);
+  }
+  try {
+    parts.push(JSON.stringify(bubble));
+  } catch {
+    /* ignore */
+  }
+  return parts.join("\n");
+}
+
 export function matchHopId(userText: string): HopId | undefined {
   return HOP_IDS.find((id) => userText.includes(HOP_FINGERPRINTS[id]));
 }
@@ -88,18 +102,37 @@ export function composerFromRows(
   const model =
     (header.modelConfig && typeof header.modelConfig === "object"
       ? String((header.modelConfig as { modelName?: string }).modelName ?? "")
-      : "") || undefined;
-  const user = bubbles.find((b) => b.type === 1 && String(b.text ?? "").length > 0);
-  const assistants = bubbles.filter((b) => b.type === 2 && String(b.text ?? "").trim().length > 0);
-  const assistantText = assistants.map((b) => String(b.text ?? "")).join("\n\n");
-  const firstAssistant = assistants[0];
+      : "") ||
+    (typeof header.name === "string" ? header.name : "") ||
+    undefined;
+  const user =
+    bubbles.find((b) => b.type === 1 && bubbleText(b).trim().length > 0) ??
+    bubbles.find((b) => matchHopId(bubbleText(b)));
+  const assistants = bubbles.filter((b) => b.type === 2 && bubbleText(b).trim().length > 0);
+  const assistantText =
+    assistants.map((b) => (typeof b.text === "string" && b.text.trim() ? b.text : bubbleText(b))).join("\n\n") ||
+    bubbles
+      .filter((b) => b.type !== 1)
+      .map((b) => (typeof b.text === "string" ? b.text : bubbleText(b)))
+      .filter((text) => text.trim().length > 0)
+      .join("\n\n");
+  const firstAssistant = assistants[0] ?? bubbles.find((b) => b.type !== 1);
+  const headerBlob = (() => {
+    try {
+      return JSON.stringify(header);
+    } catch {
+      return "";
+    }
+  })();
   return {
     composerId,
     createdAt: parseMs(header.createdAt),
     lastUpdatedAt: parseMs(header.lastUpdatedAt),
     status: typeof header.status === "string" ? header.status : undefined,
     model: model || undefined,
-    userText: String(user?.text ?? ""),
+    userText: [String(user ? bubbleText(user) : ""), headerBlob, typeof header.name === "string" ? header.name : ""].join(
+      "\n"
+    ),
     assistantText,
     userCreatedAt: parseMs(user?.createdAt),
     assistantCreatedAt: parseMs(firstAssistant?.createdAt)

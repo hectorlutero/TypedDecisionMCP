@@ -27,8 +27,8 @@ function loadSeen(): Set<string> {
 async function main(): Promise<void> {
   const db = openCursorDb();
   console.log(`Banco do Cursor: ${db}`);
-  console.log("New chat → cola cmd-01 / sub-01 / … → envia. Não cronometres.");
-  console.log("");
+  console.log("New chat → cola o bloco inteiro (system + JSON) → envia. Não cronometres.");
+  console.log("A ler os chats recentes…");
 
   let manual = loadManual();
   const seen = loadSeen();
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
           console.log(`gravado ${hit.id}  ${hit.latency_ms} ms  ${hit.composerId}`);
         }
       } else if (slot) {
-        console.log(`À espera de ${slot.id} sample ${slot.sample + 1}/3 …`);
+        console.log(`À espera de ${slot.id} sample ${slot.sample + 1}/3 …  (vi ${hits.length} hop(s) no banco)`);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
