@@ -38,6 +38,8 @@
     "bench:baseline:pack": "tsx bench/pack-proxy-run.ts",
     "bench:report": "tsx bench/report.ts",
     "bench:ui-log": "tsx bench/ui-log.ts",
+    "bench:ui-watch": "tsx bench/ui-watch.ts",
+    "bench:ui-import": "tsx bench/import-cursor-ui.ts",
     "check:independent": "node scripts/check-independent.mjs"
   },
   "dependencies": {
