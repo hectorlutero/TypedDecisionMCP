@@ -34,8 +34,7 @@ function interestingSkips(skipped: Array<{ composerId: string; reason: string }>
 async function main(): Promise<void> {
   const db = openCursorDb();
   console.log(`Banco do Cursor: ${db}`);
-  console.log("New chat → copia desde [cmd-01] até ao } final → envia. Não cronometres.");
-  console.log("A ler os chats recentes…");
+  console.log("New chat → copia desde [cmd-01] até ao } final (a etiqueta e o JSON). Não cronometres.");
 
   let manual = loadManual();
   const seen = loadSeen();
@@ -45,6 +44,9 @@ async function main(): Promise<void> {
 
   while (nextEmptySlot(manual)) {
     const slot = nextEmptySlot(manual);
+    if (slot && !lastWait) {
+      console.log(`À espera de ${slot.id} sample ${slot.sample + 1}/3 …`);
+    }
     try {
       const scan = readCursorScan(db);
       const result = assignHits(manual, scan.hits, seen);
