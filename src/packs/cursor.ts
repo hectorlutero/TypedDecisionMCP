@@ -7,10 +7,10 @@ import {
 } from "../contract.js";
 
 const SUBAGENTES = {
-  explore: "Read-only search in this repository. Locate code, callers, where UI is rendered. Not Cursor Settings.",
+  explore: "Search the codebase or answer a question without editing",
   generalPurpose: "Implement or change code across the repo",
   "ci-investigator": "Diagnose a failing CI check or test run",
-  "cursor-guide": "Cursor product: Settings, MCP install, app UI. Not a question about this repo's source.",
+  "cursor-guide": "Question about how Cursor itself works",
   "security-review": "Review a diff for security issues"
 } as const;
 

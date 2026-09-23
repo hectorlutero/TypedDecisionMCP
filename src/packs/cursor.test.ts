@@ -38,14 +38,16 @@ describe("packs", () => {
     }
   });
 
-  it("keeps explore vs cursor-guide contrast", () => {
+  it("leaves subagente criteria on the pre-A1 wording", () => {
     const questions = resolveQuestions({ task: "x" }, "subagente", undefined);
     expect(questions.subagente?.type).toBe("choice");
     if (questions.subagente?.type === "choice") {
-      expect(questions.subagente.criteria.explore).toContain("repository");
-      expect(questions.subagente.criteria.explore).toContain("Not Cursor Settings");
-      expect(questions.subagente.criteria["cursor-guide"]).toContain("Cursor product");
-      expect(questions.subagente.criteria["cursor-guide"]).toContain("this repo's source");
+      expect(questions.subagente.criteria.explore).toBe(
+        "Search the codebase or answer a question without editing"
+      );
+      expect(questions.subagente.criteria["cursor-guide"]).toBe(
+        "Question about how Cursor itself works"
+      );
     }
   });
 
