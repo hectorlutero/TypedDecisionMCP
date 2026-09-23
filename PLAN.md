@@ -28,7 +28,7 @@ Há **dois réus**. Não se misturam.
 
 Hops do 10× (um por preset; um é “não”): `cmd-01`, `sub-01`, `diff-02`, `file-01`, `commit-01`.
 
-Contador pinado: `bench/token-count.ts` (`chars/4`) no texto do hop e no `JSON.stringify(answers)`. Sem `text` no UI, o rácio usa o número da UI no numerador (`token_ruler: mixed`) — mais fraco.
+Contador pinado: `bench/token-count.ts` (`chars/4`) no texto do hop e no transcript **canónico** da decisão (`type` + `yes`/`choice`/`score`). `probabilities`, `legend` e `confidence` ficam na resposta da tool e **fora** do rácio. Sem `text` no UI, o rácio usa o número da UI no numerador (`token_ruler: mixed`) — mais fraco.
 
 Relógio do proxy: três hops que só respondem `ok` → `spawn_ms`. Se `latency_ms < 0,5 × latency_raw_ms`, o hop é nulo. Sem spawn de três, o 10× de **tempo** fica `skipped`; qualidade e 10× de tokens podem fechar.
 

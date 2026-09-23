@@ -3,16 +3,15 @@
   "method": "cursor-subagent",
   "tokenizer": "chars/4",
   "model": "cursor-subagent-inherit",
-  "recorded_at": "2026-09-23T11:50:53.598Z",
+  "recorded_at": "2026-09-23T12:23:46.479Z",
   "spawn_void": true,
   "spawn_ms_observed": [
     12731,
     16107,
     15976
   ],
-  "protocol": "warm-2 + 3 ok on same agent + 5 hops resume + per-criterion paragraphs",
   "agent": "bc-c5ab8815-b874-5024-90ed-ce7bcd6a706e",
-  "note": "incremental resume still ~15s; spawn ate the clock; time_gate skipped",
+  "note": "hop cmd-01 void: latency_ms 4608 < 0.5 × latency_raw_ms 20584",
   "rows": [
     {
       "id": "cmd-01",
@@ -48,21 +47,21 @@
       "id": "file-01",
       "split": "authored",
       "preset": "ficheiro",
-      "latency_ms": 15260,
-      "latency_raw_ms": 15260,
-      "output_tokens": 138,
+      "latency_ms": 22896,
+      "latency_raw_ms": 22896,
+      "output_tokens": 136,
       "prompt_tokens": 0,
-      "text": "`src/policy.ts` is the right place: a policy module is where default auto thresholds and related rules normally live, so changing the default belongs there rather than at the app edge or in docs.\n\n`src/index.ts` is not the right place: the entry file usually wires or re-exports modules and should not own the canonical default auto threshold if a dedicated policy module exists.\n\n`README.md` is not the right place: that file documents behavior and cannot set the runtime default the request asks to change.\n\n```json\n{\"ficheiro\":\"src/policy.ts\"}\n```"
+      "text": "The request field is \"Change the default auto threshold\".\n\n`src/policy.ts` is the place to change the default auto threshold because a policy module is where that default and its rules belong.\n\n`src/index.ts` is not the place to change the default auto threshold because the entry file wires modules and should not own that default when `src/policy.ts` exists.\n\n`README.md` is not the place to change the default auto threshold because it only documents behavior and does not set the runtime default.\n\n```json\n{\"ficheiro\":\"src/policy.ts\"}\n```"
     },
     {
       "id": "commit-01",
       "split": "authored",
       "preset": "commit",
-      "latency_ms": 31592,
-      "latency_raw_ms": 31592,
-      "output_tokens": 96,
+      "latency_ms": 22140,
+      "latency_raw_ms": 22140,
+      "output_tokens": 124,
       "prompt_tokens": 0,
-      "text": "Score 0 fits: the diff adds `add` with no accompanying tests (`tests` is `none`), so it matches missing tests and is not ready to commit.\n\nScore 1 does not fit: that label requires tests to exist with review still open, and this state has no tests at all.\n\nScore 2 does not fit: ready to commit needs tests and review both done, and neither is present here.\n\n```json\n{\"commit\":0}\n```"
+      "text": "The diff is \"export function add(a,b){return a+b}\\n\" and the tests value is \"none\".\n\n\"missing tests — not ready\" fits this state because the snippet adds `add` and tests is none, so the change is not ready to commit.\n\n\"needs review — tests exist but review is open\" does not fit this state because that label requires tests to exist and this state has none.\n\n\"ready to commit — tests and review are done\" does not fit this state because tests and review are not done.\n\n```json\n{\"commit\":0}\n```"
     }
   ]
 }

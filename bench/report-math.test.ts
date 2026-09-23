@@ -12,7 +12,9 @@ describe("report math", () => {
       "cursor-ui"
     );
     expect(paired[0]?.ruler).toBe("chars/4");
-    expect(paired[0]?.token).toBe(countTokens(text) / countTokens(JSON.stringify(answers)));
+    expect(paired[0]?.token).toBe(
+      countTokens(text) / countTokens(JSON.stringify({ comando: { type: "yesno", yes: 1 } }))
+    );
   });
 
   it("requires 4/5 for a 10x win and splits quality from time", () => {
