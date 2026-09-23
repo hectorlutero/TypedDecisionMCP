@@ -19,7 +19,7 @@ export const PACKS: Record<Exclude<Preset, "pacote">, Questions> = {
     comando: {
       type: "yesno",
       instructions:
-        "Is this shell command destructive (deletes or discards data, mkfs/format disk, force-push, drop table, reset --hard, irrecoverable overwrite)?"
+        "Is this shell command destructive (deletes data, formats a disk, force-push, drop, irrecoverable overwrite)?"
     }
   },
   subagente: {
@@ -32,7 +32,7 @@ export const PACKS: Record<Exclude<Preset, "pacote">, Questions> = {
   diff: {
     diff: {
       type: "yesno",
-      instructions: "Does this diff implement the user's request and only that request? Answer no if the diff is unrelated, incomplete, or adds extra unrequested work."
+      instructions: "Does this diff cover the user's request, with no extra unrequested work?"
     }
   },
   ficheiro: {

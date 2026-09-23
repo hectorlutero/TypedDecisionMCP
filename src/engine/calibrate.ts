@@ -15,8 +15,13 @@ export function optionMass(
   );
 }
 
-export function smoothPrior(prior: Record<string, number>, alpha = 0.05): Record<string, number> {
+export function smoothPrior(prior: Record<string, number>, alpha = 0.02): Record<string, number> {
   return Object.fromEntries(Object.keys(prior).map((key) => [key, (prior[key] ?? 0) + alpha]));
+}
+
+function minMass(prior: Record<string, number>): number {
+  const values = Object.values(prior);
+  return values.length === 0 ? 0 : Math.min(...values);
 }
 
 /** Contextual calibration: divide observed option mass by a null-prompt prior, then renormalize. */
@@ -25,7 +30,7 @@ export function divideByPrior(
   prior: Record<string, number>,
   epsilon = EPS
 ): Record<string, number> {
-  const damped = smoothPrior(prior);
+  const damped = minMass(prior) < 1e-4 ? smoothPrior(prior) : prior;
   const calibrated = Object.fromEntries(
     Object.keys(actual).map((key) => {
       const denom = Math.max(damped[key] ?? 0, epsilon);
