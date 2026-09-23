@@ -10,7 +10,9 @@ export function importManualFile(
   dest = join(root, "baseline.json")
 ): string {
   if (!existsSync(src)) {
-    throw new Error(`missing ${src} — copy bench/manual.template.json to bench/manual.json and fill the five hops`);
+    throw new Error(
+      `missing ${src} — copy bench/manual.template.json (cursor-ui) or bench/proxy.template.json (cursor-subagent) to bench/manual.json`
+    );
   }
   const manual = parseManualBaseline(JSON.parse(readFileSync(src, "utf8")));
   const measured = toMeasuredBaseline(manual);

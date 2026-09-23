@@ -22,7 +22,7 @@ npm run bench:logits
 npm run bench:report
 ```
 
-`bench:report` só aceita 10× com `bench/baseline.json` (`source: measured`). Sem chave de API: mede **cinco hops no Cursor** (`cmd-01` `sub-01` `diff-01` `file-01` `commit-01`), preenche `bench/manual.json` a partir de `bench/manual.template.json`, corre `npm run bench:baseline`. Prompts em `bench/hop-prompts.md`. Sem isso o report mede qualidade e `generated_tokens === 0`.
+`bench:report` separa qualidade de 10×. Qualidade: authored ≥ 0,75 e `generated_tokens === 0`. 10× tokens exige `bench/baseline.json` com `source: measured` e `method: cursor-ui` (Composer) ou `cursor-subagent` (`DECIDIR_ACCEPT_PROXY=1`, `text` em todos os hops). Os hops são `cmd-01` `sub-01` `diff-02` `file-01` `commit-01`. Prompts em `bench/hop-prompts.md`. Mesma régua `chars/4` nos dois lados quando há `text`. 10× de tempo só com relógio da UI ou spawn de três hops `ok`.
 
 Último bench nesta VM (Qwen3-0.6B Q8, CPU, sem baseline medido): `generated_tokens === 0`, p50 ~270 ms, **authored 0,775**, held-out 0,70. O gate de qualidade (0,75) passou. O 10× de tokens/tempo ainda precisa de `bench/baseline.json` medido (`npm run bench:baseline`). Escada `DECIDIR_TIER=1.7B|4B` se quiseres repetir o ouro noutro GGUF.
 

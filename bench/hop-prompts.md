@@ -1,9 +1,9 @@
 # Cinco hops do Cursor (baseline 10×)
 
-Um chat por hop. Pensa, devolve JSON, **não** chames `decidir`.
+Um chat por hop. Pensa, devolve JSON, **não** chames `decidir`. O conjunto inclui `diff-02` (ouro `no`).
 
-Anota `output_tokens` (tokens gerados do modelo) e `latency_ms` (envia → último token).
-Copia `bench/manual.template.json` para `bench/manual.json` e preenche. Depois:
+Aceite v1: `method: cursor-ui` — tokens e ms da UI. Copia `bench/manual.template.json` → `bench/manual.json`.
+Proxy: `method: cursor-subagent` — três hops `ok` (`spawn_ms`), hops em série, `text` obrigatório. Molde `bench/proxy.template.json`. Report só aceita proxy com `DECIDIR_ACCEPT_PROXY=1`.
 
 ```bash
 npm run bench:baseline
@@ -71,7 +71,7 @@ Think step by step about the decision, then return only JSON answers for the que
 }
 ```
 
-## 3. diff-01 (`diff`)
+## 3. diff-02 (`diff`)
 
 Chat **novo**. Sem a tool `decidir`. Cronómetro no envio → último token.
 
@@ -87,7 +87,7 @@ Think step by step about the decision, then return only JSON answers for the que
 {
   "state": {
     "request": "Rename decide() to runDecision()",
-    "diff": "function runDecision() {\n  return decideAction();\n}"
+    "diff": "function decide() {\n  return 1;\n}"
   },
   "questions": {
     "diff": {

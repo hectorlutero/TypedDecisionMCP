@@ -12,17 +12,36 @@ Comparado com o hop de hoje: o modelo grande do Cursor **raciocina** o mesmo `if
 
 Sobre o **mesmo fixture**, o motor local tem de cumprir **os dois**:
 
-| Métrica | Baseline (Cursor / frontier a raciocinar o `if`) | Alvo `decidir` | 10× |
+| Métrica | Baseline (Cursor a raciocinar o `if`) | Alvo `decidir` | 10× |
 |---|---|---|---|
-| Tokens **gerados** no hop | 500–4 000 (CoT + JSON) | **0** no motor + ≤ 200 no transcript da tool | ≥ 10× nos tokens gerados do hop |
-| Latência p50 do hop | 2–15 s | **≤ 200 ms** (modelo quente) | ≥ 10× se o baseline for ≥ 2 s |
+| Tokens **gerados** no hop | 500–4 000 (CoT + JSON) | **0** no motor + transcript da tool | ≥ 10× nos tokens gerados do hop |
+| Latência do hop | 2–15 s | p50 nosso (modelo quente) | ≥ 10× no mesmo id |
+
+Há **dois réus**. Não se misturam.
+
+| `method` | Onde | Aceite v1 | Relógio | Tokens |
+|---|---|---|---|---|
+| `cursor-ui` | Composer, chat novo, sem `decidir` | **sim** | envia → último token na UI | da UI; se houver `text`, o report reconta os dois lados com `chars/4` |
+| `cursor-subagent` | Task/subagente, mesmo enunciado | **proxy** — só com `DECIDIR_ACCEPT_PROXY=1` | hops **em série**; `latency_ms = raw − mediana(3× spawn)` | `text` **obrigatório**; os dois lados no `chars/4` |
+
+`method` vazio, `api-hop` ou proxy sem a flag: o report **não** dá 10×.
+
+Hops do 10× (um por preset; um é “não”): `cmd-01`, `sub-01`, `diff-02`, `file-01`, `commit-01`.
+
+Contador pinado: `bench/token-count.ts` (`chars/4`) no texto do hop e no `JSON.stringify(answers)`. Sem `text` no UI, o rácio usa o número da UI no numerador (`token_ruler: mixed`) — mais fraco.
+
+Relógio do proxy: três hops que só respondem `ok` → `spawn_ms`. Se `latency_ms < 0,5 × latency_raw_ms`, o hop é nulo. Sem spawn de três, o 10× de **tempo** fica `skipped`; qualidade e 10× de tokens podem fechar.
+
+Qualidade e 10× **separam-se**: authored ≥ 0,75 + `generated_tokens === 0` já é gate próprio. O v1 de tokens 10× exige `source: measured` + method aceite + ≥ 4/5 com rácio ≥ 10. O v1 de tempo 10× só corre se o relógio for UI ou proxy com spawn de três.
+
+Cada linha do baseline guarda `text` (obrigatório no proxy), `model`, `method`, `tokenizer`. Sem `text` no proxy o report falha.
 
 Regra de aceite do v1:
 
-1. **Tokens:** `baseline_output_tokens / tool_transcript_tokens ≥ 10` em ≥ 4 dos 5 fixtures.
-2. **Tempo:** `baseline_p50_ms / nosso_p50_ms ≥ 10` nos mesmos fixtures, modelo já carregado.
-3. **Qualidade mínima:** balanced accuracy ≥ 0,75 no set de ouro *authored* (não pode ser 10× a responder mal).
-4. **Independência:** `grep` no repo sem `typesafe.ai`, sem `TYPESAFE_`, sem SDK TypeSafe. CI falha se aparecer.
+1. **Qualidade:** authored ≥ 0,75, held-out ≥ 0,70, `generated_tokens === 0`.
+2. **Tokens 10×:** ≥ 4 dos 5 hops, mesma régua quando há `text`.
+3. **Tempo 10×:** ≥ 4 dos 5, só se o relógio estiver activo.
+4. **Independência:** `grep` sem `typesafe.ai`, sem `TYPESAFE_`, sem SDK TypeSafe.
 
 10× da **sessão inteira** do Cursor está **fora**. Ler o repo e escrever código não passa por esta tool. O 10× é o hop de decisão.
 
@@ -264,7 +283,7 @@ A fase 1 é o produto. O MCP é o adaptador Cursor. Construir o MCP antes do rep
 
 ## Critérios de pronto (v1)
 
-1. Report de bench verde: 10× tokens, 10× tempo, acc ≥ 0,75.
+1. Report: qualidade (acc ≥ 0,75, gen 0). 10× tokens se houver baseline `cursor-ui` ou proxy com flag. 10× tempo só com relógio UI ou spawn de três.
 2. Uma tool `decidir` no Cursor. Zero tools a mais.
 3. Runtime sem rede obrigatória. Sem TypeSafe. Sem chave de LLM.
 4. `generated_tokens === 0` em todas as respostas do motor.

@@ -1,10 +1,11 @@
 {
+  "method": "cursor-ui",
   "model": "cursor-composer",
   "rows": [
-    { "id": "cmd-01", "output_tokens": 0, "latency_ms": 0 },
-    { "id": "sub-01", "output_tokens": 0, "latency_ms": 0 },
-    { "id": "diff-01", "output_tokens": 0, "latency_ms": 0 },
-    { "id": "file-01", "output_tokens": 0, "latency_ms": 0 },
-    { "id": "commit-01", "output_tokens": 0, "latency_ms": 0 }
+    { "id": "cmd-01", "output_tokens": 0, "latency_ms": 0, "text": "" },
+    { "id": "sub-01", "output_tokens": 0, "latency_ms": 0, "text": "" },
+    { "id": "diff-02", "output_tokens": 0, "latency_ms": 0, "text": "" },
+    { "id": "file-01", "output_tokens": 0, "latency_ms": 0, "text": "" },
+    { "id": "commit-01", "output_tokens": 0, "latency_ms": 0, "text": "" }
   ]
 }

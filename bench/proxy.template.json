@@ -1,0 +1,12 @@
+{
+  "method": "cursor-subagent",
+  "model": "cursor-subagent",
+  "spawn_ms": [0, 0, 0],
+  "rows": [
+    { "id": "cmd-01", "text": "", "latency_raw_ms": 0 },
+    { "id": "sub-01", "text": "", "latency_raw_ms": 0 },
+    { "id": "diff-02", "text": "", "latency_raw_ms": 0 },
+    { "id": "file-01", "text": "", "latency_raw_ms": 0 },
+    { "id": "commit-01", "text": "", "latency_raw_ms": 0 }
+  ]
+}
