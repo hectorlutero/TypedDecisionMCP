@@ -38,6 +38,17 @@ describe("packs", () => {
     }
   });
 
+  it("keeps diff as yesno with contrastive options", () => {
+    const questions = resolveQuestions({ request: "x", diff: "y" }, "diff", undefined);
+    expect(questions.diff).toMatchObject({
+      type: "yesno",
+      options: {
+        yes: expect.stringContaining("requested name"),
+        no: expect.stringContaining("missing")
+      }
+    });
+  });
+
   it("leaves subagente criteria on the pre-A1 wording", () => {
     const questions = resolveQuestions({ task: "x" }, "subagente", undefined);
     expect(questions.subagente?.type).toBe("choice");

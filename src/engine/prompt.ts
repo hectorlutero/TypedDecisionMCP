@@ -11,8 +11,8 @@ export type OptionSpec = {
 export function optionSpecs(question: Question): OptionSpec[] {
   if (question.type === "yesno") {
     return [
-      { key: "yes", label: "A", description: "yes" },
-      { key: "no", label: "B", description: "no" }
+      { key: "yes", label: "A", description: question.options?.yes ?? "yes" },
+      { key: "no", label: "B", description: question.options?.no ?? "no" }
     ];
   }
   if (question.type === "choice") {

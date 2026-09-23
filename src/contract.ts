@@ -2,7 +2,13 @@ import { z } from "zod";
 
 export const yesnoQuestionSchema = z.object({
   type: z.literal("yesno"),
-  instructions: z.string().min(1)
+  instructions: z.string().min(1),
+  options: z
+    .object({
+      yes: z.string().min(1),
+      no: z.string().min(1)
+    })
+    .optional()
 });
 
 export const choiceQuestionSchema = z.object({

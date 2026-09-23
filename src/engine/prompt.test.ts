@@ -3,9 +3,19 @@ import { buildPrompt, optionSpecs, wrapForModel } from "./prompt.js";
 
 describe("optionSpecs", () => {
   it("maps yesno and score onto letter labels", () => {
-    expect(optionSpecs({ type: "yesno", instructions: "ok?" }).map((opt) => [opt.key, opt.label])).toEqual([
-      ["yes", "A"],
-      ["no", "B"]
+    expect(optionSpecs({ type: "yesno", instructions: "ok?" }).map((opt) => [opt.key, opt.label, opt.description])).toEqual([
+      ["yes", "A", "yes"],
+      ["no", "B", "no"]
+    ]);
+    expect(
+      optionSpecs({
+        type: "yesno",
+        instructions: "ok?",
+        options: { yes: "covers the request", no: "missing or extra" }
+      }).map((opt) => [opt.key, opt.label, opt.description])
+    ).toEqual([
+      ["yes", "A", "covers the request"],
+      ["no", "B", "missing or extra"]
     ]);
     expect(
       optionSpecs({ type: "score", instructions: "ready?", criteria: ["missing", "review", "ready"] }).map(
