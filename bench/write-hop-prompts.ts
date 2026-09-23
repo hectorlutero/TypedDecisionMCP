@@ -34,9 +34,9 @@ export function renderHopPromptsMarkdown(): string {
   return [
     "# Cinco hops do Cursor (baseline 10×)",
     "",
-    "Um chat por hop. Pensa, devolve JSON, **não** chames `decidir`. O conjunto inclui `diff-02` (ouro `no`).",
+    "Três chats **novos** por hop (15 no total). Pensa, devolve JSON, **não** chames `decidir`. O conjunto inclui `diff-02` (ouro `no`).",
     "",
-    "Aceite v1: `method: cursor-ui` — tokens e ms da UI. Copia `bench/manual.template.json` → `bench/manual.json`.",
+    "Aceite v1: `method: cursor-ui`. Copia `bench/manual.template.json` → `bench/manual.json` e cola os 3 `samples` por hop. O import tira a mediana.",
     "Proxy: `method: cursor-subagent` — três hops `ok` (`spawn_ms`), hops em série, `text` obrigatório. Molde `bench/proxy.template.json`. Report só aceita proxy com `DECIDIR_ACCEPT_PROXY=1`.",
     "",
     "```bash",

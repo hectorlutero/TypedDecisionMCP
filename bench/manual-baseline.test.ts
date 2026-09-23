@@ -50,6 +50,33 @@ describe("manual baseline", () => {
     expect(measured.rows[0]?.text.length).toBeGreaterThan(0);
   });
 
+  it("collapses three cursor-ui samples to the median latency chat", () => {
+    const measured = toMeasuredBaseline(
+      parseManualBaseline({
+        method: "cursor-ui",
+        model: "cursor-composer",
+        rows: [
+          {
+            id: "cmd-01",
+            samples: [
+              { latency_ms: 9000, text: "slow cmd" },
+              { latency_ms: 4000, text: "mid cmd" },
+              { latency_ms: 3500, text: "fast cmd" }
+            ]
+          },
+          { id: "sub-01", output_tokens: 700, latency_ms: 3500, text: "sub" },
+          { id: "diff-02", output_tokens: 600, latency_ms: 3000, text: "diff" },
+          { id: "file-01", output_tokens: 500, latency_ms: 2800, text: "file" },
+          { id: "commit-01", output_tokens: 550, latency_ms: 3200, text: "commit" }
+        ]
+      })
+    );
+    const cmd = measured.rows.find((row) => row.id === "cmd-01");
+    expect(cmd?.latency_ms).toBe(4000);
+    expect(cmd?.text).toBe("mid cmd");
+    expect(cmd?.output_tokens).toBe(countTokens("mid cmd"));
+  });
+
   it("rejects zeros, missing hops, and spawn-eaten clocks", () => {
     expect(() => parseManualBaseline({ method: "cursor-ui", model: "x", rows: ui.rows.slice(0, 4) })).toThrow(
       DecideError

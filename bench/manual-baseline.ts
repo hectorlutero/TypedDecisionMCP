@@ -2,17 +2,29 @@ import { z } from "zod";
 import { DecideError } from "../src/contract.js";
 import { HOP_IDS, isHopId } from "./hop-ids.js";
 import { loadFixtures, type Fixture } from "./load-fixtures.js";
-import { applySpawn, isLatencyValid, spawnMedian } from "./spawn.js";
+import { applySpawn, isLatencyValid, median, spawnMedian } from "./spawn.js";
 import { TOKENIZER_ID, countTokens } from "./token-count.js";
 
 const hopId = z.string().refine(isHopId, { message: "id must be one of the five hop fixtures" });
 
-export const uiRowSchema = z.object({
-  id: hopId,
-  output_tokens: z.number().int().positive(),
+const uiSampleSchema = z.object({
   latency_ms: z.number().positive(),
-  text: z.string().optional()
+  text: z.string().min(1),
+  output_tokens: z.number().int().positive().optional()
 });
+
+export const uiRowSchema = z.union([
+  z.object({
+    id: hopId,
+    output_tokens: z.number().int().positive(),
+    latency_ms: z.number().positive(),
+    text: z.string().optional()
+  }),
+  z.object({
+    id: hopId,
+    samples: z.array(uiSampleSchema).length(3)
+  })
+]);
 
 export const proxyRowSchema = z.object({
   id: hopId,
@@ -57,6 +69,19 @@ export type MeasuredBaseline = {
   rows: MeasuredRow[];
 };
 
+export function collapseUiSamples(
+  samples: Array<{ latency_ms: number; text: string; output_tokens?: number }>
+): { latency_ms: number; output_tokens: number; text: string } {
+  const sorted = [...samples].sort((a, b) => a.latency_ms - b.latency_ms);
+  const mid = sorted[1];
+  if (!mid) throw new DecideError("invalid_request", "cursor-ui samples require three timings");
+  return {
+    latency_ms: median(samples.map((sample) => sample.latency_ms)),
+    text: mid.text,
+    output_tokens: mid.output_tokens ?? countTokens(mid.text)
+  };
+}
+
 function requireHops<T extends { id: string }>(rows: T[]): void {
   const seen = new Set(rows.map((row) => row.id));
   const missing = HOP_IDS.filter((id) => !seen.has(id));
@@ -87,14 +112,15 @@ export function toMeasuredBaseline(manual: ManualBaseline, recordedAt = new Date
         const fixture = fixtures.get(id);
         const row = manual.rows.find((item) => item.id === id);
         if (!fixture || !row) throw new DecideError("invalid_request", `hop ${id} not found`);
+        const collapsed = "samples" in row ? collapseUiSamples(row.samples) : row;
         return {
           id,
           split: "authored" as const,
           preset: fixture.preset,
-          latency_ms: row.latency_ms,
-          output_tokens: row.output_tokens,
+          latency_ms: collapsed.latency_ms,
+          output_tokens: collapsed.output_tokens,
           prompt_tokens: 0 as const,
-          text: row.text && row.text.length > 0 ? row.text : ""
+          text: collapsed.text && collapsed.text.length > 0 ? collapsed.text : ""
         };
       })
     };
