@@ -16,8 +16,8 @@ Fonte: `bench/out/logits.json`, `bench/out/logits-1.7B.json`, `bench/baseline.js
 
 | Métrica | Número |
 |---|---|
-| Authored 0.6B | 31/40 (0,775) |
-| Held-out 0.6B | 7/10 (0,70) — **um** flip derruba o 0,70 |
+| Authored 0.6B | 30/40 (0,75) na corrida A0; 31/40 na corrida anterior (margem em `diff-05` / `commit-03` / `commit-08`) |
+| Held-out 0.6B | **14/20 (0,70)** depois de A0. Linha de base: não descer de 14/20 |
 | Authored 1.7B | 30/40 (pior). p50 568 ms |
 | p50 0.6B authored | 269,9 ms. `prompt_tokens` p50 134. ~2,02 ms/token all-in |
 | `generated_tokens` | 0 em todas as linhas |
@@ -134,7 +134,9 @@ Não copiar o texto de A1/A2. Escrever o state **antes** de fechar as strings do
 npm run bench:logits
 ```
 
-Anotar authored 31/40 e o held-out novo (n=20). O 0,70 do aceite de melhorias passa a ser **acc no n=20**, não no n=10 antigo. Se o n=20 já vier < 0,70 no pack actual, o gate de «não descer» usa esse número como linha de base, não 0,70 inventado.
+Anotar authored e o held-out novo (n=20). O 0,70 do aceite de melhorias passa a ser **acc no n=20**, não no n=10 antigo. Se o n=20 já vier < 0,70 no pack actual, o gate de «não descer» usa esse número como linha de base, não 0,70 inventado.
+
+**Linha de base A0 (pack actual, 0.6B, esta VM):** authored **30/40 (0,75)** — `diff-05` virou hit face ao 31/40 antigo; `commit-03` e `commit-08` saíram (margem). Held-out **14/20 (0,70)**. Misses held-out: `h-cmd-01`, `h-file-01`, `h-commit-01`, `h-sub-03`, `h-diff-04`, `h-file-04`. Misses authored: `sub-01`, `diff-02/04/06/08`, `file-02`, `file-07`, `commit-03`, `commit-05`, `commit-08`. Gate de «não descer» o held-out: **14/20**.
 
 Commit A0 **sozinho** (só jsonl + número de linha de base). Sem pack.
 
