@@ -2,7 +2,7 @@
 
 Repositório: `hectorlutero/TypedDecisionMCP`.
 
-O aceite v1 deste ficheiro (authored ≥ 0,75, 10×, dois réus) **não muda**. O plano de implementação para authored 0,85 e 15× — fases A–F, o que está congelado, C só no fim — está em [PLAN-melhorias.md](PLAN-melhorias.md).
+O aceite v1 deste ficheiro (authored ≥ 0,75, 10×, dois réus) **não muda**. O plano de implementação para authored 0,85 e 15× está em [PLAN-melhorias.md](PLAN-melhorias.md): A0 held-out → A pack → A′ yesno contrastivo no `diff` → B choice só se falhar → G `getLogits` se o top-40 mentir → C (`cursor-ui`, n=3) → C5 a tool ser chamada → D relógio → E/F só se o tempo falhar. Overlay `grep` no `diff` e escada 1.7B ficam **fora**.
 
 Uma tool no Cursor. Motor **local**. Lê logits das opções. **Zero** chamada à TypeSafe. **Zero** JSON gerado no caminho que tem de bater 10×.
 
