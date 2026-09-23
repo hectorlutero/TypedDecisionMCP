@@ -168,7 +168,7 @@ Stack: Node 20+, TypeScript, `@modelcontextprotocol/sdk`, `node-llama-cpp` (ou b
 
 - [ ] 40 linhas de ouro *authored* (8 por preset; `comando` com polaridade explícita)
 - [ ] 10 linhas *held-out* que não se usam para afinar prompt
-- [ ] `bench/baseline.ts`: um request “pensa e devolve JSON” por fixture. Grava `output_tokens`, `latency_ms`, resposta. Correr **uma vez**, commitar `bench/baseline.json` (números, não a chave)
+- [x] `bench/baseline.ts`: hop medido. Sem chave: cinco chats no Cursor (`bench/hop-prompts.md` → `bench/manual.json`). Com chave: os mesmos cinco via API. Commitar `bench/baseline.json` (números, não a chave)
 - [ ] `bench/report.ts` com as fórmulas de 10× e o 0,75
 - [ ] Fixture de polaridade: comando destrutivo com `yesno` alto → `action: stop`
 

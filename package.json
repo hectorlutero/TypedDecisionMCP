@@ -33,6 +33,7 @@
     "fetch-model": "tsx src/fetch-model.ts",
     "bench:logits": "tsx bench/logits.ts",
     "bench:baseline": "tsx bench/baseline.ts",
+    "bench:baseline:prompts": "tsx bench/write-hop-prompts.ts",
     "bench:report": "tsx bench/report.ts",
     "check:independent": "node scripts/check-independent.mjs"
   },
