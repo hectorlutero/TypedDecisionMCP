@@ -37,6 +37,7 @@
     "bench:baseline:prompts": "tsx bench/write-hop-prompts.ts",
     "bench:baseline:pack": "tsx bench/pack-proxy-run.ts",
     "bench:report": "tsx bench/report.ts",
+    "bench:ui-log": "tsx bench/ui-log.ts",
     "check:independent": "node scripts/check-independent.mjs"
   },
   "dependencies": {

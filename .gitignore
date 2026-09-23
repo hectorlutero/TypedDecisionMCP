@@ -8,3 +8,5 @@ dist/
 coverage/
 bench/out/
 bench/manual.json
+bench/ui-run.jsonl
+bench/ui-paste.txt
