@@ -20,6 +20,10 @@ describe("cursor-store", () => {
     expect(hopLatencyMs({ createdAt: 50, lastUpdatedAt: 50 })).toBe(1);
   });
 
+  it("rejects a 26 minute composer span", () => {
+    expect(hopLatencyMs({ createdAt: 1, lastUpdatedAt: 1_609_163 })).toBeUndefined();
+  });
+
   it("uses user createdAt → lastUpdatedAt as the hop clock", () => {
     expect(
       hopLatencyMs({

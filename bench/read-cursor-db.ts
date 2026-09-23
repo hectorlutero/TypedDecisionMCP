@@ -13,7 +13,7 @@ import {
 import { readSince } from "./ui-since.js";
 
 const RECENT_COMPOSERS = 16;
-const SINCE_SLACK_MS = 5 * 60 * 1000;
+const SINCE_SLACK_MS = 60 * 1000;
 
 export type CursorSkip = { composerId: string; reason: string };
 
@@ -60,9 +60,9 @@ function composerIdFromKey(key: string, prefix: string): string {
 
 function afterSince(composer: CursorComposer, since: number): boolean {
   if (!since) return true;
-  const stamp = composer.lastUpdatedAt ?? composer.createdAt ?? composer.assistantCreatedAt ?? composer.userCreatedAt;
-  if (stamp == null) return true;
-  return stamp >= since - SINCE_SLACK_MS;
+  const born = composer.createdAt ?? composer.userCreatedAt;
+  if (born == null) return false;
+  return born >= since - SINCE_SLACK_MS;
 }
 
 function bubbleIdsFromHeader(header: Record<string, unknown>): string[] {

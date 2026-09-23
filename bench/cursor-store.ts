@@ -63,7 +63,9 @@ export function matchHopId(userText: string): HopId | undefined {
   return ids.length === 1 ? ids[0] : undefined;
 }
 
-export function hopLatencyMs(row: {
+export const MAX_HOP_MS = 3 * 60 * 1000;
+
+export function hopSpanMs(row: {
   createdAt?: number;
   lastUpdatedAt?: number;
   userCreatedAt?: number;
@@ -72,9 +74,19 @@ export function hopLatencyMs(row: {
   const end = row.lastUpdatedAt ?? row.assistantCreatedAt;
   const start = row.userCreatedAt ?? row.createdAt;
   if (end == null || start == null) return undefined;
-  const ms = end - start;
+  return end - start;
+}
+
+export function hopLatencyMs(row: {
+  createdAt?: number;
+  lastUpdatedAt?: number;
+  userCreatedAt?: number;
+  assistantCreatedAt?: number;
+}): number | undefined {
+  const ms = hopSpanMs(row);
+  if (ms == null) return undefined;
   if (ms === 0) return 1;
-  if (!(ms > 0) || ms > 30 * 60 * 1000) return undefined;
+  if (!(ms > 0) || ms > MAX_HOP_MS) return undefined;
   return ms;
 }
 
@@ -83,6 +95,8 @@ export function skipReason(composer: CursorComposer): string | undefined {
   if (ids.length === 0) return "sem texto do hop";
   if (ids.length > 1) return `vários hops (${ids.join(",")})`;
   if (!composer.assistantText.trim()) return "ainda sem resposta";
+  const span = hopSpanMs(composer);
+  if (span != null && span > MAX_HOP_MS) return "relógio > 3 min (chat velho)";
   if (hopLatencyMs(composer) == null) return "sem relógio";
   return undefined;
 }
