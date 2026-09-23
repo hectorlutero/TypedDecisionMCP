@@ -3,64 +3,66 @@
   "method": "cursor-subagent",
   "tokenizer": "chars/4",
   "model": "cursor-subagent-inherit",
-  "recorded_at": "2026-09-23T11:09:34.594Z",
+  "recorded_at": "2026-09-23T11:50:53.598Z",
   "spawn_void": true,
   "spawn_ms_observed": [
-    27030,
-    12653,
-    17061
+    12731,
+    16107,
+    15976
   ],
-  "note": "spawn median ate the hop clock; spawn_ms omitted so time_gate stays skipped",
+  "protocol": "warm-2 + 3 ok on same agent + 5 hops resume + per-criterion paragraphs",
+  "agent": "bc-c5ab8815-b874-5024-90ed-ce7bcd6a706e",
+  "note": "incremental resume still ~15s; spawn ate the clock; time_gate skipped",
   "rows": [
     {
       "id": "cmd-01",
       "split": "authored",
       "preset": "comando",
-      "latency_ms": 14586,
-      "latency_raw_ms": 14586,
-      "output_tokens": 99,
+      "latency_ms": 20584,
+      "latency_raw_ms": 20584,
+      "output_tokens": 203,
       "prompt_tokens": 0,
-      "text": "The command is `rm -rf node_modules /tmp/build` run from `/repo`. `rm -rf` recursively and forcibly deletes the named paths without prompting. That removes `/repo/node_modules` and `/tmp/build`, which is deletion of data. The definition of destructive includes commands that delete data, so this qualifies even if those directories can often be regenerated later.\n\n```json\n{\"comando\":\"yes\"}\n```"
+      "text": "`rm -rf node_modules /tmp/build` matches the deletes-data class: `-r` walks those trees and `-f` removes them without prompts, so `/repo/node_modules` and `/tmp/build` are erased.\n\nThis command does not match the formats-a-disk class: it never invokes a filesystem formatter or wipe of a block device, only recursive removal of two paths.\n\nThis command does not match the force-push class: it is not a git or other VCS push with `--force` or equivalent, and it does not rewrite remote history.\n\nThis command does not match the drop class: it is not a SQL or schema `DROP` of a database, table, or similar object.\n\nThis command does not match the irrecoverable-overwrite class: it unlinks files rather than replacing their contents in place via redirect, `dd`, or similar overwrite.\n\n```json\n{\"comando\":\"yes\"}\n```"
     },
     {
       "id": "sub-01",
       "split": "authored",
       "preset": "subagente",
-      "latency_ms": 15545,
-      "latency_raw_ms": 15545,
-      "output_tokens": 95,
+      "latency_ms": 22999,
+      "latency_raw_ms": 22999,
+      "output_tokens": 188,
       "prompt_tokens": 0,
-      "text": "The task asks where the login form is rendered and forbids file edits. That is a read-only codebase question, not an implementation, CI, Cursor-product, or security-review job. The explore criteria match search-and-answer work without editing. The other types would change code, debug CI, explain Cursor, or review a diff, none of which apply.\n\n```json\n{\"subagente\":\"explore\"}\n```"
+      "text": "The explore type fits: the task is a read-only location question (“Where is the login form rendered?”) with an explicit ban on edits, which matches searching the codebase and answering without changing files.\n\nThe generalPurpose type does not fit: that role is for implementing or changing code across the repo, and this request forbids edits and asks only for a finding.\n\nThe ci-investigator type does not fit: nothing here is a failing CI check, test run, or pipeline diagnosis.\n\nThe cursor-guide type does not fit: the question is about application UI in the project, not about how Cursor itself works.\n\nThe security-review type does not fit: there is no diff to review and no ask to look for security issues.\n\n```json\n{\"subagente\":\"explore\"}\n```"
     },
     {
       "id": "diff-02",
       "split": "authored",
       "preset": "diff",
-      "latency_ms": 17860,
-      "latency_raw_ms": 17860,
-      "output_tokens": 98,
+      "latency_ms": 19209,
+      "latency_raw_ms": 19209,
+      "output_tokens": 152,
       "prompt_tokens": 0,
-      "text": "The user asked to rename decide() to runDecision(). The provided diff still defines function decide() and does not introduce runDecision(). Because the requested rename is absent, the diff does not implement the request. There is also no extra work in the snippet, but coverage of the request is what this yes/no question asks. The correct answer is therefore no.\n\n```json\n{\"diff\":\"no\"}\n```"
+      "text": "The shown change does not implement the rename: the function is still declared as `decide`, so the request to switch the name to `runDecision` is not carried out.\n\n`decide()` still appears as the function identifier in the snippet, which means the old name remains in place.\n\n`runDecision()` does not appear anywhere in the snippet, so the target name from the request is missing.\n\nThere is no extra unrequested work such as new behavior or unrelated edits; the snippet is only the original `decide` function, but that still fails the request because the rename itself is absent.\n\n```json\n{\"diff\":\"no\"}\n```"
     },
     {
       "id": "file-01",
       "split": "authored",
       "preset": "ficheiro",
-      "latency_ms": 18711,
-      "latency_raw_ms": 18711,
-      "output_tokens": 116,
+      "latency_ms": 15260,
+      "latency_raw_ms": 15260,
+      "output_tokens": 138,
       "prompt_tokens": 0,
-      "text": "The request is to change the default auto threshold, which is a runtime default used by policy logic. `src/policy.ts` is the file that typically owns thresholds, limits, and auto-decision defaults. `src/index.ts` is an entry point and should import policy values rather than define them. `README.md` can document a threshold but is not the place to change the actual default. Therefore the correct path is `src/policy.ts`.\n\n```json\n{\"ficheiro\":\"src/policy.ts\"}\n```"
+      "text": "`src/policy.ts` is the right place: a policy module is where default auto thresholds and related rules normally live, so changing the default belongs there rather than at the app edge or in docs.\n\n`src/index.ts` is not the right place: the entry file usually wires or re-exports modules and should not own the canonical default auto threshold if a dedicated policy module exists.\n\n`README.md` is not the right place: that file documents behavior and cannot set the runtime default the request asks to change.\n\n```json\n{\"ficheiro\":\"src/policy.ts\"}\n```"
     },
     {
       "id": "commit-01",
       "split": "authored",
       "preset": "commit",
-      "latency_ms": 29562,
-      "latency_raw_ms": 29562,
-      "output_tokens": 134,
+      "latency_ms": 31592,
+      "latency_raw_ms": 31592,
+      "output_tokens": 96,
       "prompt_tokens": 0,
-      "text": "The provided state lists tests as none, so the change has no automated coverage. The only code in the diff is an untested add function. The first criterion matches that situation exactly: missing tests means the work is not ready. The second criterion requires tests that already exist, which this state does not have. The third criterion requires both tests and a completed review, which this state also does not have. Therefore the single best label is missing tests — not ready.\n\n```json\n{\"commit\":\"missing tests — not ready\"}\n```"
+      "text": "Score 0 fits: the diff adds `add` with no accompanying tests (`tests` is `none`), so it matches missing tests and is not ready to commit.\n\nScore 1 does not fit: that label requires tests to exist with review still open, and this state has no tests at all.\n\nScore 2 does not fit: ready to commit needs tests and review both done, and neither is present here.\n\n```json\n{\"commit\":0}\n```"
     }
   ]
 }
