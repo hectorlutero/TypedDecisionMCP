@@ -23,8 +23,8 @@ describe("prompt", () => {
   it("lists letter options and wraps a Qwen chat turn", () => {
     const options = optionSpecs({ type: "yesno", instructions: "Is this destructive?" });
     const body = buildPrompt('{"command":"rm -rf /"}', { type: "yesno", instructions: "Is this destructive?" }, options);
-    expect(body).toContain("A - yes");
-    expect(body).toContain("B - no");
+    expect(body).toContain("A - yes — the answer to the question is yes");
+    expect(body).toContain("B - no — the answer to the question is no");
     const wrapped = wrapForModel(body);
     expect(wrapped).toContain("<|im_start|>assistant");
     expect(wrapped).toContain("</think>");

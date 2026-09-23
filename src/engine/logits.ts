@@ -113,7 +113,8 @@ export class LogitEngine implements DecisionEngine {
       seq.clearHistory();
       const probs = await this.nextTokenProbs(tokens);
       const actual = optionMass(options.map((opt) => opt.key), tokensByKey, (token) => probs.get(token)?.probability ?? 0);
-      const prior = calibrateEnabled()
+      const shouldCalibrate = calibrateEnabled() && question.type !== "choice";
+      const prior = shouldCalibrate
         ? await this.priorFor(question, options, tokensByKey)
         : Object.fromEntries(options.map((opt) => [opt.key, 1]));
       answers[id] = toAnswer(question.type, options, divideByPrior(actual, prior));

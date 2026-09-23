@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { divideByPrior, optionMass, priorCacheKey } from "./calibrate.js";
+import { divideByPrior, optionMass, priorCacheKey, smoothPrior } from "./calibrate.js";
 
 describe("calibrate", () => {
   it("divides by prior and can flip a yes-biased argmax", () => {
@@ -17,6 +17,13 @@ describe("calibrate", () => {
     const mass = optionMass(["yes", "no"], { yes: [1, 2], no: [3] }, (token) => probs.get(token) ?? 0);
     expect(mass.yes).toBeCloseTo(0.3);
     expect(mass.no).toBeCloseTo(0.4);
+  });
+
+  it("adds a floor so a near-zero prior cannot explode one option", () => {
+    const smoothed = smoothPrior({ A: 0.9, B: 0, C: 0 });
+    expect(smoothed.B).toBeGreaterThan(0);
+    const calibrated = divideByPrior({ A: 0.4, B: 0.3, C: 0.3 }, { A: 0.99, B: 1e-12, C: 1e-12 });
+    expect(calibrated.B ?? 0).toBeLessThan(0.9);
   });
 
   it("keys priors by instructions and labels", () => {

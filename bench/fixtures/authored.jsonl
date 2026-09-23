@@ -23,13 +23,13 @@
 {"id":"diff-07","split":"authored","preset":"diff","state":{"request":"Document the env var DECIDIR_MODEL","diff":"# DECIDIR_MODEL\nPath to the GGUF file."},"gold":{"diff":"yes"}}
 {"id":"diff-08","split":"authored","preset":"diff","state":{"request":"Document the env var DECIDIR_MODEL","diff":"export const PORT = 3000;"},"gold":{"diff":"no"}}
 {"id":"file-01","split":"authored","preset":"ficheiro","state":{"request":"Change the default auto threshold","candidates":["src/policy.ts","src/index.ts","README.md"]},"gold":{"ficheiro":"src/policy.ts"}}
-{"id":"file-02","split":"authored","preset":"ficheiro","state":{"request":"Add the stdio entrypoint shebang","candidates":["src/index.ts","src/policy.ts","bench/report.ts"]},"gold":{"ficheiro":"src/index.ts"}}
-{"id":"file-03","split":"authored","preset":"ficheiro","state":{"request":"Explain how to fetch the GGUF","candidates":["models/README.md","src/policy.ts","src/index.ts"]},"gold":{"ficheiro":"models/README.md"}}
+{"id":"file-02","split":"authored","preset":"ficheiro","state":{"request":"Add the stdio entrypoint shebang","candidates":["src/policy.ts","src/index.ts","bench/report.ts"]},"gold":{"ficheiro":"src/index.ts"}}
+{"id":"file-03","split":"authored","preset":"ficheiro","state":{"request":"Explain how to fetch the GGUF","candidates":["src/policy.ts","src/index.ts","models/README.md"]},"gold":{"ficheiro":"models/README.md"}}
 {"id":"file-04","split":"authored","preset":"ficheiro","state":{"request":"Parse yesno questions","candidates":["src/contract.ts","examples/cursor.mcp.json","LICENSE"]},"gold":{"ficheiro":"src/contract.ts"}}
-{"id":"file-05","split":"authored","preset":"ficheiro","state":{"request":"Wire the Cursor MCP example JSON","candidates":["examples/cursor.mcp.json","src/policy.ts","bench/logits.ts"]},"gold":{"ficheiro":"examples/cursor.mcp.json"}}
-{"id":"file-06","split":"authored","preset":"ficheiro","state":{"request":"Add the 10x report math","candidates":["bench/report.ts","src/index.ts","LICENSE"]},"gold":{"ficheiro":"bench/report.ts"}}
-{"id":"file-07","split":"authored","preset":"ficheiro","state":{"request":"Change MIT copyright holder","candidates":["LICENSE","src/packs/cursor.ts","bench/logits.ts"]},"gold":{"ficheiro":"LICENSE"}}
-{"id":"file-08","split":"authored","preset":"ficheiro","state":{"request":"Add the comando preset copy","candidates":["src/packs/cursor.ts","src/http.ts","models/README.md"]},"gold":{"ficheiro":"src/packs/cursor.ts"}}
+{"id":"file-05","split":"authored","preset":"ficheiro","state":{"request":"Wire the Cursor MCP example JSON","candidates":["src/policy.ts","examples/cursor.mcp.json","bench/logits.ts"]},"gold":{"ficheiro":"examples/cursor.mcp.json"}}
+{"id":"file-06","split":"authored","preset":"ficheiro","state":{"request":"Add the 10x report math","candidates":["src/index.ts","LICENSE","bench/report.ts"]},"gold":{"ficheiro":"bench/report.ts"}}
+{"id":"file-07","split":"authored","preset":"ficheiro","state":{"request":"Change MIT copyright holder","candidates":["src/packs/cursor.ts","LICENSE","bench/logits.ts"]},"gold":{"ficheiro":"LICENSE"}}
+{"id":"file-08","split":"authored","preset":"ficheiro","state":{"request":"Add the comando preset copy","candidates":["src/http.ts","models/README.md","src/packs/cursor.ts"]},"gold":{"ficheiro":"src/packs/cursor.ts"}}
 {"id":"commit-01","split":"authored","preset":"commit","state":{"diff":"export function add(a,b){return a+b}\n","tests":"none"},"gold":{"commit":"0"}}
 {"id":"commit-02","split":"authored","preset":"commit","state":{"diff":"export function add(a,b){return a+b}\n","tests":"add.test.ts covers add()","review":"pending"},"gold":{"commit":"1"}}
 {"id":"commit-03","split":"authored","preset":"commit","state":{"diff":"export function add(a,b){return a+b}\n","tests":"add.test.ts green","review":"approved"},"gold":{"commit":"2"}}

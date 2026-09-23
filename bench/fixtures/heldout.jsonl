@@ -4,7 +4,7 @@
 {"id":"h-sub-02","split":"heldout","preset":"subagente","state":{"task":"The lint job failed on main. Why?"},"gold":{"subagente":"ci-investigator"}}
 {"id":"h-diff-01","split":"heldout","preset":"diff","state":{"request":"Export LogitEngine","diff":"export { LogitEngine } from './engine/logits.js';"},"gold":{"diff":"yes"}}
 {"id":"h-diff-02","split":"heldout","preset":"diff","state":{"request":"Export LogitEngine","diff":"const unused = 1;"},"gold":{"diff":"no"}}
-{"id":"h-file-01","split":"heldout","preset":"ficheiro","state":{"request":"Start the HTTP listener","candidates":["src/http.ts","src/policy.ts","LICENSE"]},"gold":{"ficheiro":"src/http.ts"}}
-{"id":"h-file-02","split":"heldout","preset":"ficheiro","state":{"request":"Tighten the review threshold default","candidates":["src/policy.ts","README.md","LICENSE"]},"gold":{"ficheiro":"src/policy.ts"}}
+{"id":"h-file-01","split":"heldout","preset":"ficheiro","state":{"request":"Start the HTTP listener","candidates":["src/policy.ts","LICENSE","src/http.ts"]},"gold":{"ficheiro":"src/http.ts"}}
+{"id":"h-file-02","split":"heldout","preset":"ficheiro","state":{"request":"Tighten the review threshold default","candidates":["README.md","src/policy.ts","LICENSE"]},"gold":{"ficheiro":"src/policy.ts"}}
 {"id":"h-commit-01","split":"heldout","preset":"commit","state":{"diff":"new feature","tests":"none"},"gold":{"commit":"0"}}
 {"id":"h-commit-02","split":"heldout","preset":"commit","state":{"diff":"feature + tests + two approvals","tests":"green","review":"approved"},"gold":{"commit":"2"}}
