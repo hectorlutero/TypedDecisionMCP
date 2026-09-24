@@ -6,9 +6,11 @@ import {
   renderState,
   type CanonicalPreset,
   type Preset,
+  type Question,
   type Questions,
   type State
 } from "../contract.js";
+import { optionSpecs } from "../engine/prompt.js";
 
 const SUBAGENTS = {
   explore: "Search the codebase or answer a question without editing",
@@ -206,4 +208,41 @@ export function resolvePack(
   const canonical = preset ? normalizePreset(preset) : undefined;
   const view = canonical ? viewForPreset(canonical, state) : renderState(state);
   return { questions, view };
+}
+
+/** Option-only shots from measured Cursor hops cmd-01 / sub-01 (authored gold). */
+const FEW_SHOT: Array<{ id: string; state: State; question: Question; answerLabel: string }> = [
+  {
+    id: "command",
+    state: { command: "rm -rf node_modules /tmp/build", cwd: "/repo" },
+    question: PACKS.command.command,
+    answerLabel: "A"
+  },
+  {
+    id: "subagent",
+    state: { task: "Where is the login form rendered? Do not edit files." },
+    question: PACKS.subagent.subagent,
+    answerLabel: "A"
+  }
+];
+
+function formatOneShot(example: (typeof FEW_SHOT)[number]): string {
+  const options = optionSpecs(example.question);
+  const lines = options.map((opt) => `${opt.label} - ${opt.description}`);
+  return [
+    "Example:",
+    "State:",
+    renderState(example.state),
+    "Question:",
+    example.question.instructions,
+    "Options:",
+    ...lines,
+    `Answer: ${example.answerLabel}`
+  ].join("\n");
+}
+
+export function formatFewShot(questionIds: string[]): string {
+  const wanted = new Set(questionIds);
+  const blocks = FEW_SHOT.filter((example) => wanted.has(example.id)).map(formatOneShot);
+  return blocks.length === 0 ? "" : ["Examples:", ...blocks].join("\n");
 }

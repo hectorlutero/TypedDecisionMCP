@@ -14,8 +14,8 @@ import { modelId, resolveModelPath } from "../model-path.js";
 import { divideByPrior, optionMass, priorCacheKey } from "./calibrate.js";
 import { buildPrompt, compileHops, optionSpecs, wrapForModel, type OptionSpec } from "./prompt.js";
 import { optionTokenIds } from "./tokenize.js";
-import { envFirst } from "../env.js";
-import { PACKS } from "../packs/cursor.js";
+import { envFirst, fewShotEnabled } from "../env.js";
+import { formatFewShot, PACKS } from "../packs/cursor.js";
 
 export type ScoreResult = {
   answers: Answers;
@@ -128,7 +128,8 @@ export class LogitEngine implements DecisionEngine {
     const model = this.requireModel();
     const seq = this.requireSequence();
     const stateText = renderState(state);
-    const compiled = compileHops(stateText, questions);
+    const fewShot = fewShotEnabled() ? formatFewShot(Object.keys(questions)) : "";
+    const compiled = compileHops(stateText, questions, fewShot);
     const answers: Answers = {};
     let promptTokens = 0;
 

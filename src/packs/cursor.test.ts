@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DecideError } from "../contract.js";
-import { resolvePack, resolveQuestions } from "./cursor.js";
+import { formatFewShot, resolvePack, resolveQuestions } from "./cursor.js";
 
 describe("packs", () => {
   it("builds file from candidates", () => {
@@ -196,5 +196,19 @@ describe("packs", () => {
     expect(pack.view).toContain("approved");
     expect(pack.view).toContain("export function add");
     expect(pack.view).not.toContain("ignore me");
+  });
+
+  it("formats Cursor option few-shot only for matching question ids", () => {
+    const commandShot = formatFewShot(["command"]);
+    expect(commandShot).toContain("rm -rf node_modules /tmp/build");
+    expect(commandShot).toContain("Answer: A");
+    expect(commandShot).not.toContain("login form");
+
+    const subShot = formatFewShot(["subagent"]);
+    expect(subShot).toContain("login form");
+    expect(subShot).toContain("Answer: A");
+    expect(subShot).not.toContain("rm -rf node_modules");
+
+    expect(formatFewShot(["diff"])).toBe("");
   });
 });

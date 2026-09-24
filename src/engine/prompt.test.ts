@@ -85,4 +85,17 @@ describe("prompt", () => {
     expect(compiled.prefix).toContain(stateText);
     expect(compiled.prefix).not.toContain("Is this destructive?");
   });
+
+  it("puts few-shot option examples in the shared prefix only", () => {
+    const stateText = '{"command":"ls"}';
+    const questions = {
+      command: { type: "yesno" as const, instructions: "Is this destructive?" }
+    };
+    const fewShot = "Example:\nState:\n{\"command\":\"rm -rf /tmp\"}\nAnswer: A\n";
+    const compiled = compileHops(stateText, questions, fewShot);
+    expect(compiled.prefix).toContain("rm -rf /tmp");
+    expect(compiled.prefix).toContain("Answer: A");
+    expect(compiled.items.command?.suffix).not.toContain("rm -rf /tmp");
+    expect(compiled.items.command?.full.startsWith(compiled.prefix)).toBe(true);
+  });
 });

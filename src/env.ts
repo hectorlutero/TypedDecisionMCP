@@ -5,3 +5,7 @@ export function envFirst(env: NodeJS.ProcessEnv, ...names: string[]): string | u
   }
   return undefined;
 }
+
+export function fewShotEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return envFirst(env, "DECIDE_FEWSHOT", "DECIDIR_FEWSHOT") === "1";
+}
