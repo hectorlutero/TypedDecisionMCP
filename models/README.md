@@ -20,3 +20,4 @@ Env útil nesta máquina:
 - `DECIDE_TIER=0.6B|1.7B|4B` (default **0.6B** — ship)
 - `DECIDE_GPU=0|cpu` — força CPU (necessário se Vulkan OOM em tiers maiores; no 0.6B preferir `auto`)
 - `DECIDE_KV=0` — desliga reuse KV (ablation; piora qualidade/latência)
+- `DECIDE_FEWSHOT=1` — option few-shot no prefixo (opt-in; no 0.6B quality cai abaixo de 0,75)
