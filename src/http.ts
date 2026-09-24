@@ -3,7 +3,8 @@ import { createServer as createHttpServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { getLogitEngine, isEngineWarm } from "./engine/logits.js";
+import { getDecisionEngine } from "./decide.js";
+import { isEngineWarm } from "./engine/logits.js";
 import { resolveModelPath } from "./model-path.js";
 import { envFirst } from "./env.js";
 import { createServer } from "./server.js";
@@ -44,7 +45,7 @@ const http = createHttpServer(async (req, res) => {
 
 http.listen(port, host, () => {
   console.error(`TypedDecisionMCP http://${host}:${port}/mcp`);
-  void getLogitEngine()
+  void getDecisionEngine()
     .then(() => console.error("TypedDecisionMCP warm=true"))
     .catch((err) => console.error("TypedDecisionMCP warm failed", err));
 });

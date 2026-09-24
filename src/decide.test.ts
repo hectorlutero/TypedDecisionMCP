@@ -8,6 +8,7 @@ const stub: DecisionEngine = {
       Object.keys(questions).map((id) => [id, { type: "yesno" as const, yes: 0.1 }])
     );
     return {
+      engine: "logits",
       answers,
       model: "stub",
       usage: { prompt_tokens: 1, generated_tokens: 0 },
@@ -18,6 +19,18 @@ const stub: DecisionEngine = {
 };
 
 describe("decide", () => {
+  it("returns engine head-mlp when the scorer labels itself that way", async () => {
+    const head: DecisionEngine = {
+      async score(state, questions) {
+        const inner = await stub.score(state, questions);
+        return { ...inner, engine: "head-mlp" };
+      },
+      async dispose() {}
+    };
+    const result = await decide({ state: "git status", preset: "command" }, head);
+    expect(result.engine).toBe("head-mlp");
+  });
+
   it("returns English answer keys for Portuguese preset aliases", async () => {
     const result = await decide({ state: "git status", preset: "comando" }, stub);
     expect(result.engine).toBe("logits");

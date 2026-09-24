@@ -125,7 +125,7 @@ export const answerSchema = z.discriminatedUnion("type", [
 export const actionSchema = z.enum(["auto", "review", "stop"]);
 
 export const decideOutputSchema = z.object({
-  engine: z.literal("logits"),
+  engine: z.enum(["logits", "head-mlp"]),
   model: z.string(),
   answers: z.record(z.string(), answerSchema),
   action: actionSchema,
