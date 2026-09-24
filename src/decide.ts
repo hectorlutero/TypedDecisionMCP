@@ -7,7 +7,7 @@ import {
   type State
 } from "./contract.js";
 import { getLogitEngine, type DecisionEngine } from "./engine/logits.js";
-import { resolveQuestions } from "./packs/cursor.js";
+import { resolvePack, resolveQuestions } from "./packs/cursor.js";
 import { decideAction } from "./policy.js";
 
 export async function decide(
@@ -15,9 +15,9 @@ export async function decide(
   engine?: DecisionEngine
 ): Promise<DecideOutput> {
   const input = parseDecideInput(raw);
-  const questions = resolveQuestions(input.state, normalizePreset(input.preset), input.questions);
+  const pack = resolvePack(input.state, normalizePreset(input.preset), input.questions);
   const resolved = engine ?? (await getLogitEngine());
-  const scored = await resolved.score(input.state, questions);
+  const scored = await resolved.score(pack.view, pack.questions);
   const { action, reasons } = decideAction(scored.answers);
   return {
     engine: "logits",

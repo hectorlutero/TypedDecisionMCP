@@ -1,7 +1,9 @@
 import {
   DecideError,
   extractCandidates,
+  isRecord,
   normalizePreset,
+  renderState,
   type CanonicalPreset,
   type Preset,
   type Questions,
@@ -115,4 +117,93 @@ export function resolveQuestions(
     throw new DecideError("invalid_request", "preset or questions is required");
   }
   return merged;
+}
+
+function pickString(state: State, key: string): string | undefined {
+  if (!isRecord(state)) return undefined;
+  const value = state[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+const DIFF_VIEW_CHARS = 1800;
+
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}\n…`;
+}
+
+function viewForPreset(preset: CanonicalPreset, state: State): string {
+  if (typeof state === "string") return state;
+  if (preset === "command") {
+    const view: Record<string, string> = {};
+    const command = pickString(state, "command");
+    const cwd = pickString(state, "cwd");
+    if (command) view.command = command;
+    if (cwd) view.cwd = cwd;
+    return renderState(view);
+  }
+  if (preset === "diff") {
+    const view: Record<string, string> = {};
+    const request = pickString(state, "request");
+    const diff = pickString(state, "diff");
+    if (request) view.request = request;
+    if (diff) view.diff = truncate(diff, DIFF_VIEW_CHARS);
+    return renderState(view);
+  }
+  if (preset === "subagent") {
+    const view: Record<string, string> = {};
+    const request = pickString(state, "request") ?? pickString(state, "task");
+    if (request) view.request = request;
+    return renderState(view);
+  }
+  if (preset === "file") {
+    const view: Record<string, unknown> = {};
+    const request = pickString(state, "request");
+    if (request) view.request = request;
+    const candidates = extractCandidates(state);
+    if (candidates.length) view.candidates = candidates;
+    return renderState(view);
+  }
+  if (preset === "commit") {
+    const view: Record<string, string> = {};
+    const request = pickString(state, "request");
+    const diff = pickString(state, "diff");
+    const tests = pickString(state, "tests");
+    const review = pickString(state, "review");
+    if (request) view.request = request;
+    if (diff) view.diff = truncate(diff, DIFF_VIEW_CHARS);
+    if (tests) view.tests = tests;
+    if (review) view.review = review;
+    return renderState(view);
+  }
+  if (preset === "bundle") {
+    const view: Record<string, unknown> = {};
+    const command = pickString(state, "command");
+    const cwd = pickString(state, "cwd");
+    const request = pickString(state, "request") ?? pickString(state, "task");
+    const diff = pickString(state, "diff");
+    const tests = pickString(state, "tests");
+    const review = pickString(state, "review");
+    if (command) view.command = command;
+    if (cwd) view.cwd = cwd;
+    if (request) view.request = request;
+    if (diff) view.diff = truncate(diff, DIFF_VIEW_CHARS);
+    if (tests) view.tests = tests;
+    if (review) view.review = review;
+    const candidates = extractCandidates(state);
+    if (candidates.length) view.candidates = candidates;
+    return renderState(view);
+  }
+  return renderState(state);
+}
+
+export function resolvePack(
+  state: State,
+  preset: Preset | undefined,
+  extra: Questions | undefined
+): { questions: Questions; view: string } {
+  const questions = resolveQuestions(state, preset, extra);
+  const canonical = preset ? normalizePreset(preset) : undefined;
+  const view = canonical ? viewForPreset(canonical, state) : renderState(state);
+  return { questions, view };
 }
