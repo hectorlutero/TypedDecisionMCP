@@ -200,14 +200,19 @@ describe("packs", () => {
 
   it("formats Cursor option few-shot only for matching question ids", () => {
     const commandShot = formatFewShot(["command"]);
-    expect(commandShot).toContain("rm -rf node_modules /tmp/build");
+    expect(commandShot).toContain("drop table users cascade");
+    expect(commandShot).toContain("git status");
     expect(commandShot).toContain("Answer: A");
+    expect(commandShot).toContain("Answer: B");
     expect(commandShot).not.toContain("login form");
+    expect(commandShot).not.toContain("forgot-password");
 
     const subShot = formatFewShot(["subagent"]);
-    expect(subShot).toContain("login form");
+    expect(subShot).toContain("decideAction");
+    expect(subShot).toContain("forgot-password");
     expect(subShot).toContain("Answer: A");
-    expect(subShot).not.toContain("rm -rf node_modules");
+    expect(subShot).toContain("Answer: B");
+    expect(subShot).not.toContain("drop table users cascade");
 
     expect(formatFewShot(["diff"])).toBe("");
   });

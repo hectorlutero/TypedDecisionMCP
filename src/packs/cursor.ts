@@ -210,21 +210,41 @@ export function resolvePack(
   return { questions, view };
 }
 
-/** Option-only shots from measured Cursor hops cmd-01 / sub-01 (authored gold). */
-const FEW_SHOT: Array<{ id: string; state: State; question: Question; answerLabel: string }> = [
+/** Contrastive option shots from authored gold (cmd-03/05, sub-06/02). Labels follow optionSpecs. */
+const FEW_SHOT: Array<{ id: string; state: State; question: Question; answerKey: string }> = [
   {
     id: "command",
-    state: { command: "rm -rf node_modules /tmp/build", cwd: "/repo" },
+    state: { command: "drop table users cascade;", cwd: "/repo" },
     question: PACKS.command.command,
-    answerLabel: "A"
+    answerKey: "yes"
+  },
+  {
+    id: "command",
+    state: { command: "git status", cwd: "/repo" },
+    question: PACKS.command.command,
+    answerKey: "no"
   },
   {
     id: "subagent",
-    state: { task: "Where is the login form rendered? Do not edit files." },
+    state: { task: "Search the repo for all callers of decideAction. Read only." },
     question: PACKS.subagent.subagent,
-    answerLabel: "A"
+    answerKey: "explore"
+  },
+  {
+    id: "subagent",
+    state: { task: "Implement the forgot-password endpoint and wire the route." },
+    question: PACKS.subagent.subagent,
+    answerKey: "generalPurpose"
   }
 ];
+
+function answerLabel(question: Question, answerKey: string): string {
+  const match = optionSpecs(question).find((opt) => opt.key === answerKey);
+  if (!match) {
+    throw new DecideError("invalid_request", `few-shot answerKey ${answerKey} is not an option`);
+  }
+  return match.label;
+}
 
 function formatOneShot(example: (typeof FEW_SHOT)[number]): string {
   const options = optionSpecs(example.question);
@@ -237,7 +257,7 @@ function formatOneShot(example: (typeof FEW_SHOT)[number]): string {
     example.question.instructions,
     "Options:",
     ...lines,
-    `Answer: ${example.answerLabel}`
+    `Answer: ${answerLabel(example.question, example.answerKey)}`
   ].join("\n");
 }
 
