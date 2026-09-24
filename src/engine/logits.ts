@@ -18,6 +18,7 @@ import { envFirst, fewShotEnabled } from "../env.js";
 import { formatFewShot, PACKS } from "../packs/cursor.js";
 
 export type ScoreResult = {
+  engine: "logits" | "head-mlp";
   answers: Answers;
   model: string;
   usage: { prompt_tokens: number; generated_tokens: 0 };
@@ -57,7 +58,7 @@ function calibrateEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
 }
 
 /** `DECIDE_GPU=0|cpu|false` forces CPU (needed when Vulkan OOMs on small laptop GPUs). */
-function resolveGpuOption(env: NodeJS.ProcessEnv = process.env): "auto" | false | "cuda" | "vulkan" | "metal" {
+export function resolveGpuOption(env: NodeJS.ProcessEnv = process.env): "auto" | false | "cuda" | "vulkan" | "metal" {
   const raw = (envFirst(env, "DECIDE_GPU", "DECIDIR_GPU") ?? "auto").toLowerCase();
   if (raw === "0" || raw === "false" || raw === "cpu" || raw === "off") return false;
   if (raw === "cuda" || raw === "vulkan" || raw === "metal") return raw;
@@ -188,6 +189,7 @@ export class LogitEngine implements DecisionEngine {
     }
 
     return {
+      engine: "logits",
       answers,
       model: modelId(),
       usage: { prompt_tokens: promptTokens, generated_tokens: 0 },
@@ -277,7 +279,7 @@ export class LogitEngine implements DecisionEngine {
   }
 }
 
-function toAnswer(
+export function toAnswer(
   type: "yesno" | "choice" | "score",
   options: OptionSpec[],
   normalized: Record<string, number>

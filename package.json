@@ -42,7 +42,9 @@
     "bench:ui-reset": "tsx bench/ui-reset.ts",
     "bench:ui-probe": "tsx bench/ui-probe.ts",
     "bench:ui-import": "tsx bench/import-cursor-ui.ts",
-    "check:independent": "node scripts/check-independent.mjs"
+    "check:independent": "node scripts/check-independent.mjs",
+    "smoke:embedding": "tsx bench/smoke-embedding.ts",
+    "train:head": "tsx train/head.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.4",
