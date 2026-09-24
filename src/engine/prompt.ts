@@ -29,8 +29,11 @@ export function optionSpecs(question: Question): OptionSpec[] {
   }));
 }
 
-export function promptPrefix(stateText: string): string {
-  return ["Classify the state. Reply with exactly one option label.", "", "State:", stateText, "", ""].join("\n");
+export function promptPrefix(stateText: string, fewShot = ""): string {
+  const example = fewShot.trim() ? [fewShot.trim(), ""] : [];
+  return ["Classify the state. Reply with exactly one option label.", "", ...example, "State:", stateText, "", ""].join(
+    "\n"
+  );
 }
 
 export function promptSuffix(question: Question, options: OptionSpec[]): string {
@@ -70,8 +73,8 @@ export type CompiledHops = {
   items: Record<string, { suffix: string; full: string }>;
 };
 
-export function compileHops(stateText: string, questions: Questions): CompiledHops {
-  const prefix = wrapPrefix(promptPrefix(stateText));
+export function compileHops(stateText: string, questions: Questions, fewShot = ""): CompiledHops {
+  const prefix = wrapPrefix(promptPrefix(stateText, fewShot));
   const items: CompiledHops["items"] = {};
   for (const [id, question] of Object.entries(questions)) {
     const suffix = wrapSuffix(promptSuffix(question, optionSpecs(question)));
