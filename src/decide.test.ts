@@ -24,4 +24,24 @@ describe("decide", () => {
     expect(result.answers.command).toEqual({ type: "yesno", yes: 0.1 });
     expect(result.answers.comando).toBeUndefined();
   });
+
+  it("scores the pack view instead of raw state noise", async () => {
+    let seen: unknown;
+    const capturing: DecisionEngine = {
+      async score(state, questions) {
+        seen = state;
+        return stub.score(state, questions);
+      },
+      async dispose() {}
+    };
+    await decide(
+      {
+        preset: "command",
+        state: { command: "ls", chatter: "ignore me" }
+      },
+      capturing
+    );
+    expect(String(seen)).toContain("ls");
+    expect(String(seen)).not.toContain("ignore me");
+  });
 });
