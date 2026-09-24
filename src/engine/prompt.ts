@@ -41,9 +41,7 @@ export function buildPrompt(stateText: string, question: Question, options: Opti
     question.instructions,
     "",
     "Options:",
-    ...lines,
-    "",
-    "Reply with exactly one label."
+    ...lines
   ].join("\n");
 }
 

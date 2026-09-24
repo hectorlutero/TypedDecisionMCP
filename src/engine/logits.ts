@@ -55,6 +55,14 @@ function calibrateEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.DECIDIR_CALIBRATE !== "0";
 }
 
+/** `DECIDIR_GPU=0|cpu|false` forces CPU (needed when Vulkan OOMs on small laptop GPUs). */
+function resolveGpuOption(env: NodeJS.ProcessEnv = process.env): "auto" | false | "cuda" | "vulkan" | "metal" {
+  const raw = (env.DECIDIR_GPU ?? "auto").toLowerCase();
+  if (raw === "0" || raw === "false" || raw === "cpu" || raw === "off") return false;
+  if (raw === "cuda" || raw === "vulkan" || raw === "metal") return raw;
+  return "auto";
+}
+
 export class LogitEngine implements DecisionEngine {
   private llama: Llama | undefined;
   private model: LlamaModel | undefined;
@@ -62,9 +70,14 @@ export class LogitEngine implements DecisionEngine {
   private sequence: LlamaContextSequence | undefined;
   private readonly modelPath: string;
   private readonly priors = new Map<string, Record<string, number>>();
+  private warm = false;
 
   constructor(modelPath = resolveModelPath()) {
     this.modelPath = modelPath;
+  }
+
+  isWarm(): boolean {
+    return this.warm;
   }
 
   async init(): Promise<void> {
@@ -76,12 +89,13 @@ export class LogitEngine implements DecisionEngine {
         503
       );
     }
-    this.llama = await getLlama();
+    this.llama = await getLlama({ gpu: resolveGpuOption() });
     this.model = await this.llama.loadModel({ modelPath: this.modelPath });
     this.context = await this.model.createContext({ contextSize: 512 });
     this.sequence = this.context.getSequence();
     await this.warmup();
     await this.warmPriors();
+    this.warm = true;
   }
 
   private async warmup(): Promise<void> {
@@ -116,7 +130,9 @@ export class LogitEngine implements DecisionEngine {
     const answers: Answers = {};
     let promptTokens = 0;
 
+    const trace = process.env.DECIDIR_TRACE === "1";
     for (const [id, question] of Object.entries(questions)) {
+      const t0 = performance.now();
       const options = optionSpecs(question);
       const tokensByKey = Object.fromEntries(
         options.map((opt) => [
@@ -126,15 +142,37 @@ export class LogitEngine implements DecisionEngine {
       );
       const prompt = wrapForModel(buildPrompt(stateText, question, options));
       const tokens = this.tokenizePrompt(prompt);
+      const tTokenize = performance.now();
       promptTokens += tokens.length;
 
-      seq.clearHistory();
-      const probs = await this.nextTokenProbs(tokens);
+      const { probs, prefix_reuse } = await this.nextTokenProbs(tokens);
+      const tProbs = performance.now();
       const actual = optionMass(options.map((opt) => opt.key), tokensByKey, (token) => probs.get(token)?.probability ?? 0);
       const shouldCalibrate = calibrateEnabled() && question.type !== "choice";
+      const priorKey = shouldCalibrate
+        ? priorCacheKey(
+            question.instructions,
+            options.map((opt) => ({ key: opt.key, label: opt.label }))
+          )
+        : "";
+      const priorCached = shouldCalibrate && this.priors.has(priorKey);
       const prior = shouldCalibrate
         ? await this.priorFor(question, options, tokensByKey)
         : Object.fromEntries(options.map((opt) => [opt.key, 1]));
+      const tPrior = performance.now();
+      if (trace) {
+        console.error(
+          JSON.stringify({
+            id,
+            tokenize_ms: tTokenize - t0,
+            nextTokenProbs_ms: tProbs - tTokenize,
+            prior_ms: tPrior - tProbs,
+            prior_cached: priorCached,
+            prefix_reuse,
+            prompt_tokens: tokens.length
+          })
+        );
+      }
       answers[id] = toAnswer(question.type, options, divideByPrior(actual, prior));
     }
 
@@ -164,21 +202,34 @@ export class LogitEngine implements DecisionEngine {
 
     const prompt = wrapForModel(buildPrompt("(empty)", question, options));
     const tokens = this.tokenizePrompt(prompt);
-    this.requireSequence().clearHistory();
-    const probs = await this.nextTokenProbs(tokens);
+    const { probs } = await this.nextTokenProbs(tokens);
     const prior = optionMass(options.map((opt) => opt.key), tokensByKey, (token) => probs.get(token)?.probability ?? 0);
     this.priors.set(key, prior);
     return prior;
   }
 
-  private async nextTokenProbs(tokens: number[]): Promise<ProbMap> {
+  /**
+   * Reuse KV for the longest matching prompt prefix (Qwen envelope, and State when unchanged).
+   * Falls back to a full eval when nothing overlaps (`adaptStateToTokens` + empty suffix).
+   * Set `DECIDIR_KV=0` to force clearHistory every hop (ablation / debug).
+   */
+  private async nextTokenProbs(tokens: number[]): Promise<{ probs: ProbMap; prefix_reuse: number }> {
     const seq = this.requireSequence();
     if (tokens.length === 0) {
       throw new DecideError("invalid_request", "empty prompt");
     }
-    const input = tokens.map((token, i) =>
-      i === tokens.length - 1 ? ([token, { generateNext: { probabilities: true } }] as const) : token
-    );
+    const last = tokens[tokens.length - 1]!;
+    const prefix = tokens.slice(0, -1);
+    let prefix_reuse = 0;
+    let suffix = prefix;
+    if (process.env.DECIDIR_KV === "0") {
+      await seq.clearHistory();
+    } else {
+      await seq.adaptStateToTokens(prefix as never, false);
+      prefix_reuse = seq.nextTokenIndex;
+      suffix = prefix.slice(prefix_reuse);
+    }
+    const input = [...suffix, [last, { generateNext: { probabilities: true } }] as const];
     let found: ProbMap | undefined;
     await seq.controlledEvaluate(input as never, {
       onTokenResult: (_index: number, result: { next?: { probabilities?: unknown } }) => {
@@ -189,10 +240,11 @@ export class LogitEngine implements DecisionEngine {
     if (!found) {
       throw new DecideError("engine_error", "controlledEvaluate returned no probabilities", 500);
     }
-    return found;
+    return { probs: found, prefix_reuse };
   }
 
   async dispose(): Promise<void> {
+    this.warm = false;
     this.priors.clear();
     this.sequence = undefined;
     await this.context?.dispose();
@@ -253,4 +305,8 @@ export async function getLogitEngine(): Promise<LogitEngine> {
     await singleton.init();
   }
   return singleton;
+}
+
+export function isEngineWarm(): boolean {
+  return singleton?.isWarm() ?? false;
 }

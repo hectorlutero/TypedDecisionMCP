@@ -13,6 +13,7 @@ export type CursorComposer = {
   assistantText: string;
   userCreatedAt?: number;
   assistantCreatedAt?: number;
+  turnDurationMs?: number;
 };
 
 export type CursorHopHit = {
@@ -82,7 +83,10 @@ export function hopLatencyMs(row: {
   lastUpdatedAt?: number;
   userCreatedAt?: number;
   assistantCreatedAt?: number;
+  turnDurationMs?: number;
 }): number | undefined {
+  const turn = row.turnDurationMs;
+  if (typeof turn === "number" && turn > 0 && turn <= MAX_HOP_MS) return turn;
   const ms = hopSpanMs(row);
   if (ms == null) return undefined;
   if (ms === 0) return 1;
@@ -90,13 +94,19 @@ export function hopLatencyMs(row: {
   return ms;
 }
 
+function thinkingOf(bubble: Record<string, unknown>): string {
+  const thinking = bubble.thinking;
+  if (thinking && typeof thinking === "object" && typeof (thinking as { text?: unknown }).text === "string") {
+    return (thinking as { text: string }).text.trim();
+  }
+  return "";
+}
+
 export function skipReason(composer: CursorComposer): string | undefined {
   const ids = matchedHopIds(composer.userText);
   if (ids.length === 0) return "sem texto do hop";
   if (ids.length > 1) return `vários hops (${ids.join(",")})`;
   if (!composer.assistantText.trim()) return "ainda sem resposta";
-  const span = hopSpanMs(composer);
-  if (span != null && span > MAX_HOP_MS) return "relógio > 3 min (chat velho)";
   if (hopLatencyMs(composer) == null) return "sem relógio";
   return undefined;
 }
@@ -141,22 +151,15 @@ export function composerFromRows(
   const user =
     bubbles.find((b) => b.type === 1 && bubbleText(b).trim().length > 0) ??
     bubbles.find((b) => matchHopId(bubbleText(b)));
-  const assistants = bubbles.filter((b) => b.type === 2 && bubbleText(b).trim().length > 0);
-  const assistantText =
-    assistants.map((b) => (typeof b.text === "string" && b.text.trim() ? b.text : bubbleText(b))).join("\n\n") ||
-    bubbles
-      .filter((b) => b.type !== 1)
-      .map((b) => (typeof b.text === "string" ? b.text : bubbleText(b)))
-      .filter((text) => text.trim().length > 0)
-      .join("\n\n");
-  const firstAssistant = assistants[0] ?? bubbles.find((b) => b.type !== 1);
-  const headerBlob = (() => {
-    try {
-      return JSON.stringify(header);
-    } catch {
-      return "";
-    }
-  })();
+  const thinking = bubbles.map(thinkingOf).filter((text) => text.length > 0);
+  const visible = bubbles
+    .filter((b) => b.type === 2 && typeof b.text === "string" && b.text.trim().length > 0)
+    .map((b) => String(b.text).trim());
+  const assistantText = [...thinking, ...visible].join("\n\n");
+  const turns = bubbles
+    .map((b) => (typeof b.turnDurationMs === "number" ? b.turnDurationMs : Number(b.turnDurationMs)))
+    .filter((ms) => Number.isFinite(ms) && ms > 0);
+  const firstAssistant = bubbles.find((b) => b.type === 2);
   return {
     composerId,
     createdAt: parseMs(header.createdAt) ?? parseMs(header.created_at),
@@ -164,11 +167,10 @@ export function composerFromRows(
       parseMs(header.lastUpdatedAt) ?? parseMs(header.updatedAt) ?? parseMs(header.lastUpdatedAtMs),
     status: typeof header.status === "string" ? header.status : undefined,
     model: model || undefined,
-    userText: [String(user ? bubbleText(user) : ""), headerBlob, typeof header.name === "string" ? header.name : ""].join(
-      "\n"
-    ),
+    userText: [String(user ? bubbleText(user) : ""), typeof header.name === "string" ? header.name : ""].join("\n"),
     assistantText,
     userCreatedAt: parseMs(user?.createdAt) ?? parseMs(user?.timestamp),
-    assistantCreatedAt: parseMs(firstAssistant?.createdAt) ?? parseMs(firstAssistant?.timestamp)
+    assistantCreatedAt: parseMs(firstAssistant?.createdAt) ?? parseMs(firstAssistant?.timestamp),
+    turnDurationMs: turns.length ? Math.max(...turns) : undefined
   };
 }

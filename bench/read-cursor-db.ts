@@ -44,16 +44,6 @@ function sqliteJson(db: string, sql: string): unknown[] {
   return JSON.parse(raw) as unknown[];
 }
 
-function parseValue(raw: unknown): Record<string, unknown> {
-  if (typeof raw !== "string") return {};
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
-  } catch {
-    return {};
-  }
-}
-
 function composerIdFromKey(key: string, prefix: string): string {
   return key.startsWith(prefix) ? key.slice(prefix.length) : key;
 }
@@ -114,7 +104,6 @@ function readComposers(dbPath: string, composerIds: string[]): CursorComposer[] 
             json_extract(value, '$.name') AS name,
             json_extract(value, '$.createdAt') AS createdAt,
             json_extract(value, '$.lastUpdatedAt') AS lastUpdatedAt,
-            json_extract(value, '$.updatedAt') AS updatedAt,
             json_extract(value, '$.modelConfig.modelName') AS model,
             json_extract(value, '$.fullConversationHeadersOnly') AS fullConversationHeadersOnly
        FROM cursorDiskKV WHERE key IN (${headerKeys})`
@@ -128,36 +117,40 @@ function readComposers(dbPath: string, composerIds: string[]): CursorComposer[] 
       name: row.name,
       createdAt: row.createdAt,
       lastUpdatedAt: row.lastUpdatedAt,
-      updatedAt: row.updatedAt,
       modelConfig: { modelName: row.model },
       fullConversationHeadersOnly: row.fullConversationHeadersOnly
     };
     headersById.set(composerId, header);
     for (const bubbleId of bubbleIdsFromHeader(header)) {
-      bubbleKeys.push(`bubbleId:${composerId}:${bubbleId}`, `bubbleId:${bubbleId}`);
+      bubbleKeys.push(`bubbleId:${composerId}:${bubbleId}`);
     }
   }
 
-  const like = composerIds.map((id) => `key LIKE ${sqlQuote(`bubbleId:${id}:%`)}`).join(" OR ");
-  const bubbleRows = sqliteJson(
-    dbPath,
-    bubbleKeys.length > 0
-      ? `SELECT key, value FROM cursorDiskKV WHERE key IN (${[...new Set(bubbleKeys)].map(sqlQuote).join(", ")}) OR (${like})`
-      : `SELECT key, value FROM cursorDiskKV WHERE ${like}`
-  ) as Array<{ key: string; value: string }>;
-
   const bubblesByComposer = new Map<string, Array<Record<string, unknown>>>();
   for (const id of composerIds) bubblesByComposer.set(id, []);
-  for (const row of bubbleRows) {
-    const key = row.key;
-    let composerId = composerIds.find((id) => key.startsWith(`bubbleId:${id}:`));
-    if (!composerId && key.startsWith("bubbleId:")) {
-      const parsed = parseValue(row.value);
-      const mentioned = typeof parsed.composerId === "string" ? parsed.composerId : undefined;
-      if (mentioned && composerIds.includes(mentioned)) composerId = mentioned;
+  if (bubbleKeys.length > 0) {
+    const bubbleRows = sqliteJson(
+      dbPath,
+      `SELECT key,
+              json_extract(value, '$.type') AS type,
+              json_extract(value, '$.text') AS text,
+              json_extract(value, '$.thinking.text') AS thinking,
+              json_extract(value, '$.turnDurationMs') AS turnDurationMs,
+              json_extract(value, '$.createdAt') AS createdAt
+         FROM cursorDiskKV WHERE key IN (${[...new Set(bubbleKeys)].map(sqlQuote).join(", ")})`
+    ) as Array<Record<string, unknown>>;
+    for (const row of bubbleRows) {
+      const key = String(row.key ?? "");
+      const composerId = composerIds.find((id) => key.startsWith(`bubbleId:${id}:`));
+      if (!composerId) continue;
+      bubblesByComposer.get(composerId)?.push({
+        type: row.type,
+        text: row.text,
+        createdAt: row.createdAt,
+        turnDurationMs: row.turnDurationMs,
+        thinking: typeof row.thinking === "string" && row.thinking.length > 0 ? { text: row.thinking } : undefined
+      });
     }
-    if (!composerId) continue;
-    bubblesByComposer.get(composerId)?.push(parseValue(row.value));
   }
 
   return composerIds.map((composerId) =>

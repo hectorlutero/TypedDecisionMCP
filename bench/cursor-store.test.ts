@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { composerFromRows, hopLatencyMs, matchHopId, toHopHit } from "./cursor-store.js";
+import {
+  composerFromRows,
+  hopLatencyMs,
+  matchHopId,
+  toHopHit
+} from "./cursor-store.js";
 
 describe("cursor-store", () => {
   it("matches hop fingerprints", () => {
@@ -20,8 +25,14 @@ describe("cursor-store", () => {
     expect(hopLatencyMs({ createdAt: 50, lastUpdatedAt: 50 })).toBe(1);
   });
 
-  it("rejects a 26 minute composer span", () => {
-    expect(hopLatencyMs({ createdAt: 1, lastUpdatedAt: 1_609_163 })).toBeUndefined();
+  it("prefers Cursor turnDurationMs over a long composer span", () => {
+    expect(
+      hopLatencyMs({
+        createdAt: 1,
+        lastUpdatedAt: 1_609_163,
+        turnDurationMs: 7350
+      })
+    ).toBe(7350);
   });
 
   it("uses user createdAt → lastUpdatedAt as the hop clock", () => {

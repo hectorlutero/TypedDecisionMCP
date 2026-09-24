@@ -35,6 +35,8 @@ describe("prompt", () => {
     const body = buildPrompt('{"command":"rm -rf /"}', { type: "yesno", instructions: "Is this destructive?" }, options);
     expect(body).toContain("A - yes");
     expect(body).toContain("B - no");
+    expect(body.match(/Reply with exactly one/g)?.length).toBe(1);
+    expect(body).not.toContain("Reply with exactly one label.");
     const wrapped = wrapForModel(body);
     expect(wrapped).toContain("<|im_start|>assistant");
     expect(wrapped).toContain("</think>");

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createWriteStream, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { createReadStream, createWriteStream, existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -9,7 +9,7 @@ async function main(): Promise<void> {
   const spec = activeSpec();
   const dest = resolveModelPath();
   mkdirSync(dirname(dest), { recursive: true });
-  if (existsSync(dest) && sha256(dest) === spec.sha256) {
+  if (existsSync(dest) && (await sha256(dest)) === spec.sha256) {
     console.log(`already present ${dest}`);
     return;
   }
@@ -19,15 +19,17 @@ async function main(): Promise<void> {
     throw new Error(`download failed: ${res.status} ${res.statusText}`);
   }
   await pipeline(Readable.fromWeb(res.body as never), createWriteStream(dest));
-  const hash = sha256(dest);
+  const hash = await sha256(dest);
   if (hash !== spec.sha256) {
     throw new Error(`sha256 mismatch: got ${hash} expected ${spec.sha256}`);
   }
   console.log(`saved ${dest} (${spec.repo}/${spec.file})`);
 }
 
-function sha256(path: string): string {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
+async function sha256(path: string): Promise<string> {
+  const hash = createHash("sha256");
+  await pipeline(createReadStream(path), hash);
+  return hash.digest("hex");
 }
 
 main().catch((err) => {

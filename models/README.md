@@ -14,3 +14,9 @@ DECIDIR_TIER=1.7B npm run fetch-model
 ```
 
 Saves to `$DECIDIR_MODEL` or `~/.cache/TypedDecisionMCP/<file>`.
+
+Env útil nesta máquina:
+
+- `DECIDIR_TIER=0.6B|1.7B|4B` (default **0.6B** — ship)
+- `DECIDIR_GPU=0|cpu` — força CPU (necessário se Vulkan OOM em tiers maiores; no 0.6B preferir `auto`)
+- `DECIDIR_KV=0` — desliga reuse KV (ablation; piora qualidade/latência)

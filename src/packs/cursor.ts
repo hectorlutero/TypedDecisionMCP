@@ -46,7 +46,11 @@ export const PACKS: Record<Exclude<Preset, "pacote">, Questions> = {
     commit: {
       type: "score",
       instructions: "How ready is this diff to commit? Pick the single best label.",
-      criteria: ["missing tests — not ready", "needs review — tests exist but review is open", "ready to commit — tests and review are done"]
+      criteria: [
+        "missing tests — not ready",
+        "needs review — tests exist but review is open",
+        "ready to commit — tests and review are done"
+      ]
     }
   }
 };

@@ -1,67 +1,54 @@
 {
   "source": "measured",
-  "method": "cursor-subagent",
+  "method": "cursor-ui",
   "tokenizer": "chars/4",
-  "model": "cursor-subagent-inherit",
-  "recorded_at": "2026-09-23T12:23:46.479Z",
-  "spawn_void": true,
-  "spawn_ms_observed": [
-    12731,
-    16107,
-    15976
-  ],
-  "agent": "bc-c5ab8815-b874-5024-90ed-ce7bcd6a706e",
-  "note": "hop cmd-01 void: latency_ms 4608 < 0.5 × latency_raw_ms 20584",
+  "model": "grok-4.7",
+  "recorded_at": "2026-09-23T18:37:33.781Z",
   "rows": [
     {
       "id": "cmd-01",
       "split": "authored",
       "preset": "comando",
-      "latency_ms": 20584,
-      "latency_raw_ms": 20584,
-      "output_tokens": 203,
+      "latency_ms": 7198,
+      "output_tokens": 43,
       "prompt_tokens": 0,
-      "text": "`rm -rf node_modules /tmp/build` matches the deletes-data class: `-r` walks those trees and `-f` removes them without prompts, so `/repo/node_modules` and `/tmp/build` are erased.\n\nThis command does not match the formats-a-disk class: it never invokes a filesystem formatter or wipe of a block device, only recursive removal of two paths.\n\nThis command does not match the force-push class: it is not a git or other VCS push with `--force` or equivalent, and it does not rewrite remote history.\n\nThis command does not match the drop class: it is not a SQL or schema `DROP` of a database, table, or similar object.\n\nThis command does not match the irrecoverable-overwrite class: it unlinks files rather than replacing their contents in place via redirect, `dd`, or similar overwrite.\n\n```json\n{\"comando\":\"yes\"}\n```"
+      "text": "I will analyze the command step by step and return only JSON.\n\nThe command is destructive. `rm -rf` irreversibly deletes directories and their contents.\n\n{\"comando\":\"yes\"}"
     },
     {
       "id": "sub-01",
       "split": "authored",
       "preset": "subagente",
-      "latency_ms": 22999,
-      "latency_raw_ms": 22999,
-      "output_tokens": 188,
+      "latency_ms": 5144,
+      "output_tokens": 48,
       "prompt_tokens": 0,
-      "text": "The explore type fits: the task is a read-only location question (“Where is the login form rendered?”) with an explicit ban on edits, which matches searching the codebase and answering without changing files.\n\nThe generalPurpose type does not fit: that role is for implementing or changing code across the repo, and this request forbids edits and asks only for a finding.\n\nThe ci-investigator type does not fit: nothing here is a failing CI check, test run, or pipeline diagnosis.\n\nThe cursor-guide type does not fit: the question is about application UI in the project, not about how Cursor itself works.\n\nThe security-review type does not fit: there is no diff to review and no ask to look for security issues.\n\n```json\n{\"subagente\":\"explore\"}\n```"
+      "text": "I will analyze the decision step by step and return only JSON answers.\n\nThe request is a codebase search without file edits. The correct subagent type is \"explore\".\n\n{\"subagente\":\"explore\"}"
     },
     {
       "id": "diff-02",
       "split": "authored",
       "preset": "diff",
-      "latency_ms": 19209,
-      "latency_raw_ms": 19209,
-      "output_tokens": 152,
+      "latency_ms": 3844,
+      "output_tokens": 49,
       "prompt_tokens": 0,
-      "text": "The shown change does not implement the rename: the function is still declared as `decide`, so the request to switch the name to `runDecision` is not carried out.\n\n`decide()` still appears as the function identifier in the snippet, which means the old name remains in place.\n\n`runDecision()` does not appear anywhere in the snippet, so the target name from the request is missing.\n\nThere is no extra unrequested work such as new behavior or unrelated edits; the snippet is only the original `decide` function, but that still fails the request because the rename itself is absent.\n\n```json\n{\"diff\":\"no\"}\n```"
+      "text": "Evaluating whether the diff covers renaming decide() to runDecision() without extra work.\n\nThe diff does not rename the function. It still defines `decide()`. The answer is \"no\".\n\n{\"diff\":\"no\"}"
     },
     {
       "id": "file-01",
       "split": "authored",
       "preset": "ficheiro",
-      "latency_ms": 22896,
-      "latency_raw_ms": 22896,
-      "output_tokens": 136,
+      "latency_ms": 5572,
+      "output_tokens": 83,
       "prompt_tokens": 0,
-      "text": "The request field is \"Change the default auto threshold\".\n\n`src/policy.ts` is the place to change the default auto threshold because a policy module is where that default and its rules belong.\n\n`src/index.ts` is not the place to change the default auto threshold because the entry file wires modules and should not own that default when `src/policy.ts` exists.\n\n`README.md` is not the place to change the default auto threshold because it only documents behavior and does not set the runtime default.\n\n```json\n{\"ficheiro\":\"src/policy.ts\"}\n```"
+      "text": "Evaluating the three candidate files to determine the correct location for changing the default auto threshold.\n\nThe default auto threshold belongs in src/policy.ts. That file's criteria explicitly cover auto, review, and stop thresholds.\n\nPreparing the JSON answer for the \"ficheiro\" choice question.\n\n{\"ficheiro\":\"src/policy.ts\"}"
     },
     {
       "id": "commit-01",
       "split": "authored",
       "preset": "commit",
-      "latency_ms": 22140,
-      "latency_raw_ms": 22140,
-      "output_tokens": 124,
+      "latency_ms": 6682,
+      "output_tokens": 80,
       "prompt_tokens": 0,
-      "text": "The diff is \"export function add(a,b){return a+b}\\n\" and the tests value is \"none\".\n\n\"missing tests — not ready\" fits this state because the snippet adds `add` and tests is none, so the change is not ready to commit.\n\n\"needs review — tests exist but review is open\" does not fit this state because that label requires tests to exist and this state has none.\n\n\"ready to commit — tests and review are done\" does not fit this state because tests and review are not done.\n\n```json\n{\"commit\":0}\n```"
+      "text": "I will analyze the diff and answer the question in JSON format.\n\nThe diff has no tests. The correct label is \"missing tests — not ready\". I am preparing the JSON response.\n\nThe JSON answer uses the exact em dash from the criteria. The commit key maps directly to the chosen label.\n\n{\"commit\":\"missing tests — not ready\"}"
     }
   ]
 }
