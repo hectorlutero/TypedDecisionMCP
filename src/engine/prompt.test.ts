@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildPrompt, optionSpecs, wrapForModel } from "./prompt.js";
+import {
+  buildPrompt,
+  optionSpecs,
+  promptPrefix,
+  promptSuffix,
+  compileHops,
+  wrapForModel,
+  wrapPrefix,
+  wrapSuffix
+} from "./prompt.js";
 
 describe("optionSpecs", () => {
   it("maps yesno and score onto letter labels", () => {
@@ -41,5 +50,39 @@ describe("prompt", () => {
     expect(wrapped).toContain("<|im_start|>assistant");
     expect(wrapped).toContain("</think>");
     expect(wrapped.endsWith("</think>\n")).toBe(true);
+  });
+
+  it("splits a prompt so prefix plus suffix equals the current wrap", () => {
+    const question = { type: "yesno" as const, instructions: "Is this destructive?" };
+    const options = optionSpecs(question);
+    const stateText = '{"command":"rm -rf /"}';
+    const prefix = promptPrefix(stateText);
+    const suffix = promptSuffix(question, options);
+    expect(prefix + suffix).toBe(buildPrompt(stateText, question, options));
+    expect(wrapPrefix(prefix) + wrapSuffix(suffix)).toBe(wrapForModel(buildPrompt(stateText, question, options)));
+    expect(prefix).toContain(stateText);
+    expect(prefix).not.toContain("Is this destructive?");
+    expect(suffix).toContain("Is this destructive?");
+    expect(suffix).not.toContain(stateText);
+  });
+
+  it("shares one wrap prefix across two questions", () => {
+    const stateText = '{"command":"ls"}';
+    const questions = {
+      command: { type: "yesno" as const, instructions: "Is this destructive?" },
+      diff: { type: "yesno" as const, instructions: "Does this cover the request?" }
+    };
+    const compiled = compileHops(stateText, questions);
+    expect(compiled.prefix).toBe(wrapPrefix(promptPrefix(stateText)));
+    expect(Object.keys(compiled.items).sort()).toEqual(["command", "diff"]);
+    for (const [id, question] of Object.entries(questions)) {
+      const options = optionSpecs(question);
+      expect(compiled.items[id]?.full).toBe(wrapForModel(buildPrompt(stateText, question, options)));
+      expect(compiled.items[id]?.full.startsWith(compiled.prefix)).toBe(true);
+    }
+    expect(compiled.items.command?.suffix).toContain("Is this destructive?");
+    expect(compiled.items.command?.suffix).not.toContain("Does this cover the request?");
+    expect(compiled.prefix).toContain(stateText);
+    expect(compiled.prefix).not.toContain("Is this destructive?");
   });
 });

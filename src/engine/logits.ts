@@ -12,7 +12,7 @@ import {
 } from "../contract.js";
 import { modelId, resolveModelPath } from "../model-path.js";
 import { divideByPrior, optionMass, priorCacheKey } from "./calibrate.js";
-import { buildPrompt, optionSpecs, wrapForModel, type OptionSpec } from "./prompt.js";
+import { buildPrompt, compileHops, optionSpecs, wrapForModel, type OptionSpec } from "./prompt.js";
 import { optionTokenIds } from "./tokenize.js";
 import { envFirst } from "../env.js";
 import { PACKS } from "../packs/cursor.js";
@@ -128,11 +128,20 @@ export class LogitEngine implements DecisionEngine {
     const model = this.requireModel();
     const seq = this.requireSequence();
     const stateText = renderState(state);
+    const compiled = compileHops(stateText, questions);
     const answers: Answers = {};
     let promptTokens = 0;
 
     const trace = envFirst(process.env, "DECIDE_TRACE", "DECIDIR_TRACE") === "1";
-    for (const [id, question] of Object.entries(questions)) {
+    const questionIds = Object.entries(questions);
+    const kvOn = envFirst(process.env, "DECIDE_KV", "DECIDIR_KV") !== "0";
+    if (questionIds.length > 1 && kvOn) {
+      const prefixTokens = this.tokenizePrompt(compiled.prefix);
+      await seq.clearHistory();
+      await seq.evaluateWithoutGeneratingNewTokens(prefixTokens);
+    }
+
+    for (const [id, question] of questionIds) {
       const t0 = performance.now();
       const options = optionSpecs(question);
       const tokensByKey = Object.fromEntries(
@@ -141,7 +150,7 @@ export class LogitEngine implements DecisionEngine {
           optionTokenIds({ tokenize: (text) => model.tokenize(text) as number[] }, opt.label)
         ])
       );
-      const prompt = wrapForModel(buildPrompt(stateText, question, options));
+      const prompt = compiled.items[id]?.full ?? wrapForModel(buildPrompt(stateText, question, options));
       const tokens = this.tokenizePrompt(prompt);
       const tTokenize = performance.now();
       promptTokens += tokens.length;
