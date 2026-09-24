@@ -1,4 +1,5 @@
 import {
+  normalizePreset,
   parseDecideInput,
   type DecideInput,
   type DecideOutput,
@@ -14,7 +15,7 @@ export async function decide(
   engine?: DecisionEngine
 ): Promise<DecideOutput> {
   const input = parseDecideInput(raw);
-  const questions = resolveQuestions(input.state, input.preset, input.questions);
+  const questions = resolveQuestions(input.state, normalizePreset(input.preset), input.questions);
   const resolved = engine ?? (await getLogitEngine());
   const scored = await resolved.score(input.state, questions);
   const { action, reasons } = decideAction(scored.answers);
@@ -30,5 +31,5 @@ export async function decide(
 }
 
 export function previewQuestions(state: State, input: DecideInput): Questions {
-  return resolveQuestions(state, input.preset, input.questions);
+  return resolveQuestions(state, normalizePreset(input.preset), input.questions);
 }

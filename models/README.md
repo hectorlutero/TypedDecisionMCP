@@ -1,6 +1,6 @@
 # Model
 
-Runtime GGUF is not in git. `DECIDIR_TIER` selects the pin (`0.6B` default).
+Runtime GGUF is not in git. `DECIDE_TIER` selects the pin (`0.6B` default). `DECIDIR_TIER` still works if `DECIDE_TIER` is unset.
 
 | Tier | Repo | File | SHA-256 |
 |---|---|---|---|
@@ -10,13 +10,13 @@ Runtime GGUF is not in git. `DECIDIR_TIER` selects the pin (`0.6B` default).
 
 ```bash
 npm run fetch-model
-DECIDIR_TIER=1.7B npm run fetch-model
+DECIDE_TIER=1.7B npm run fetch-model
 ```
 
-Saves to `$DECIDIR_MODEL` or `~/.cache/TypedDecisionMCP/<file>`.
+Saves to `$DECIDE_MODEL` or `~/.cache/TypedDecisionMCP/<file>`.
 
 Env útil nesta máquina:
 
-- `DECIDIR_TIER=0.6B|1.7B|4B` (default **0.6B** — ship)
-- `DECIDIR_GPU=0|cpu` — força CPU (necessário se Vulkan OOM em tiers maiores; no 0.6B preferir `auto`)
-- `DECIDIR_KV=0` — desliga reuse KV (ablation; piora qualidade/latência)
+- `DECIDE_TIER=0.6B|1.7B|4B` (default **0.6B** — ship)
+- `DECIDE_GPU=0|cpu` — força CPU (necessário se Vulkan OOM em tiers maiores; no 0.6B preferir `auto`)
+- `DECIDE_KV=0` — desliga reuse KV (ablation; piora qualidade/latência)

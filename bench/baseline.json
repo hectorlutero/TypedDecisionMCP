@@ -8,7 +8,7 @@
     {
       "id": "cmd-01",
       "split": "authored",
-      "preset": "comando",
+      "preset": "command",
       "latency_ms": 7198,
       "output_tokens": 43,
       "prompt_tokens": 0,
@@ -17,7 +17,7 @@
     {
       "id": "sub-01",
       "split": "authored",
-      "preset": "subagente",
+      "preset": "subagent",
       "latency_ms": 5144,
       "output_tokens": 48,
       "prompt_tokens": 0,
@@ -35,7 +35,7 @@
     {
       "id": "file-01",
       "split": "authored",
-      "preset": "ficheiro",
+      "preset": "file",
       "latency_ms": 5572,
       "output_tokens": 83,
       "prompt_tokens": 0,

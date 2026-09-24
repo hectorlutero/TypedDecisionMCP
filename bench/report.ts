@@ -121,7 +121,7 @@ function main(): void {
     process.exit(1);
   }
   if (method === "cursor-subagent" && !acceptProxy()) {
-    console.error("cursor-subagent proxy requires DECIDIR_ACCEPT_PROXY=1");
+    console.error("cursor-subagent proxy requires DECIDE_ACCEPT_PROXY=1");
     process.exit(1);
   }
   if (!quality || !tokenOk) process.exit(1);

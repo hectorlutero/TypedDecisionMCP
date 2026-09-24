@@ -3,38 +3,38 @@ import { DecideError } from "../contract.js";
 import { resolveQuestions } from "./cursor.js";
 
 describe("packs", () => {
-  it("builds ficheiro from candidates", () => {
+  it("builds file from candidates", () => {
     const questions = resolveQuestions(
       { candidates: ["src/a.ts", "src/b.ts"], request: "x" },
-      "ficheiro",
+      "file",
       undefined
     );
-    expect(questions.ficheiro?.type).toBe("choice");
-    if (questions.ficheiro?.type === "choice") {
-      expect(Object.keys(questions.ficheiro.criteria)).toEqual(["src/a.ts", "src/b.ts"]);
-      expect(questions.ficheiro.criteria["src/a.ts"]).toBe("a.ts");
+    expect(questions.file?.type).toBe("choice");
+    if (questions.file?.type === "choice") {
+      expect(Object.keys(questions.file.criteria)).toEqual(["src/a.ts", "src/b.ts"]);
+      expect(questions.file.criteria["src/a.ts"]).toBe("a.ts");
     }
   });
 
-  it("labels ficheiro criteria by basename role", () => {
+  it("labels file criteria by basename role", () => {
     const questions = resolveQuestions(
       {
         candidates: ["src/index.ts", "src/policy.ts", "LICENSE"],
         request: "x"
       },
-      "ficheiro",
+      "file",
       undefined
     );
-    expect(questions.ficheiro?.type).toBe("choice");
-    if (questions.ficheiro?.type === "choice") {
-      expect(Object.keys(questions.ficheiro.criteria)).toEqual([
+    expect(questions.file?.type).toBe("choice");
+    if (questions.file?.type === "choice") {
+      expect(Object.keys(questions.file.criteria)).toEqual([
         "src/index.ts",
         "src/policy.ts",
         "LICENSE"
       ]);
-      expect(questions.ficheiro.criteria["src/index.ts"]).toContain("stdio");
-      expect(questions.ficheiro.criteria["src/policy.ts"]).toContain("thresholds");
-      expect(questions.ficheiro.criteria.LICENSE).toContain("copyright");
+      expect(questions.file.criteria["src/index.ts"]).toContain("stdio");
+      expect(questions.file.criteria["src/policy.ts"]).toContain("thresholds");
+      expect(questions.file.criteria.LICENSE).toContain("copyright");
     }
   });
 
@@ -46,35 +46,63 @@ describe("packs", () => {
     });
   });
 
-  it("leaves subagente criteria on the pre-A1 wording", () => {
-    const questions = resolveQuestions({ task: "x" }, "subagente", undefined);
-    expect(questions.subagente?.type).toBe("choice");
-    if (questions.subagente?.type === "choice") {
-      expect(questions.subagente.criteria.explore).toBe(
+  it("leaves subagent criteria on the pre-A1 wording", () => {
+    const questions = resolveQuestions({ task: "x" }, "subagent", undefined);
+    expect(questions.subagent?.type).toBe("choice");
+    if (questions.subagent?.type === "choice") {
+      expect(questions.subagent.criteria.explore).toBe(
         "Search the codebase or answer a question without editing"
       );
-      expect(questions.subagente.criteria["cursor-guide"]).toBe(
+      expect(questions.subagent.criteria["cursor-guide"]).toBe(
         "Question about how Cursor itself works"
       );
     }
   });
 
-  it("rejects ficheiro without candidates", () => {
-    expect(() => resolveQuestions("just text", "ficheiro", undefined)).toThrow(DecideError);
+  it("rejects file without candidates", () => {
+    expect(() => resolveQuestions("just text", "file", undefined)).toThrow(DecideError);
+    expect(() => resolveQuestions("just text", "ficheiro", undefined)).toThrow(/preset file requires/);
   });
 
-  it("merges pacote", () => {
+  it("merges bundle", () => {
     const questions = resolveQuestions(
+      { command: "ls", candidates: ["a.ts", "b.ts"], request: "rename", diff: "x" },
+      "bundle",
+      undefined
+    );
+    expect(Object.keys(questions).sort()).toEqual([
+      "command",
+      "commit",
+      "diff",
+      "file",
+      "subagent"
+    ]);
+  });
+
+  it("normalizes Portuguese preset aliases to English answer keys", () => {
+    const fromComando = resolveQuestions({ command: "ls" }, "comando", undefined);
+    expect(fromComando.command?.type).toBe("yesno");
+    expect(fromComando.comando).toBeUndefined();
+
+    const fromFicheiro = resolveQuestions(
+      { candidates: ["a.ts", "b.ts"] },
+      "ficheiro",
+      undefined
+    );
+    expect(fromFicheiro.file?.type).toBe("choice");
+    expect(fromFicheiro.ficheiro).toBeUndefined();
+
+    const fromPacote = resolveQuestions(
       { command: "ls", candidates: ["a.ts", "b.ts"], request: "rename", diff: "x" },
       "pacote",
       undefined
     );
-    expect(Object.keys(questions).sort()).toEqual([
-      "comando",
+    expect(Object.keys(fromPacote).sort()).toEqual([
+      "command",
       "commit",
       "diff",
-      "ficheiro",
-      "subagente"
+      "file",
+      "subagent"
     ]);
   });
 });

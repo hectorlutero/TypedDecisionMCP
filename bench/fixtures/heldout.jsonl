@@ -1,20 +1,20 @@
-{"id":"h-cmd-01","split":"heldout","preset":"comando","state":{"command":"git reset --hard HEAD~20"},"gold":{"comando":"yes"}}
-{"id":"h-cmd-02","split":"heldout","preset":"comando","state":{"command":"rg DecideError src"},"gold":{"comando":"no"}}
-{"id":"h-sub-01","split":"heldout","preset":"subagente","state":{"task":"Show me every file that imports policy.ts. Do not change anything."},"gold":{"subagente":"explore"}}
-{"id":"h-sub-02","split":"heldout","preset":"subagente","state":{"task":"The lint job failed on main. Why?"},"gold":{"subagente":"ci-investigator"}}
+{"id":"h-cmd-01","split":"heldout","preset":"command","state":{"command":"git reset --hard HEAD~20"},"gold":{"command":"yes"}}
+{"id":"h-cmd-02","split":"heldout","preset":"command","state":{"command":"rg DecideError src"},"gold":{"command":"no"}}
+{"id":"h-sub-01","split":"heldout","preset":"subagent","state":{"task":"Show me every file that imports policy.ts. Do not change anything."},"gold":{"subagent":"explore"}}
+{"id":"h-sub-02","split":"heldout","preset":"subagent","state":{"task":"The lint job failed on main. Why?"},"gold":{"subagent":"ci-investigator"}}
 {"id":"h-diff-01","split":"heldout","preset":"diff","state":{"request":"Export LogitEngine","diff":"export { LogitEngine } from './engine/logits.js';"},"gold":{"diff":"yes"}}
 {"id":"h-diff-02","split":"heldout","preset":"diff","state":{"request":"Export LogitEngine","diff":"const unused = 1;"},"gold":{"diff":"no"}}
-{"id":"h-file-01","split":"heldout","preset":"ficheiro","state":{"request":"Start the HTTP listener","candidates":["src/policy.ts","LICENSE","src/http.ts"]},"gold":{"ficheiro":"src/http.ts"}}
-{"id":"h-file-02","split":"heldout","preset":"ficheiro","state":{"request":"Tighten the review threshold default","candidates":["README.md","src/policy.ts","LICENSE"]},"gold":{"ficheiro":"src/policy.ts"}}
+{"id":"h-file-01","split":"heldout","preset":"file","state":{"request":"Start the HTTP listener","candidates":["src/policy.ts","LICENSE","src/http.ts"]},"gold":{"file":"src/http.ts"}}
+{"id":"h-file-02","split":"heldout","preset":"file","state":{"request":"Tighten the review threshold default","candidates":["README.md","src/policy.ts","LICENSE"]},"gold":{"file":"src/policy.ts"}}
 {"id":"h-commit-01","split":"heldout","preset":"commit","state":{"diff":"new feature","tests":"none"},"gold":{"commit":"0"}}
 {"id":"h-commit-02","split":"heldout","preset":"commit","state":{"diff":"feature + tests + two approvals","tests":"green","review":"approved"},"gold":{"commit":"2"}}
-{"id":"h-cmd-03","split":"heldout","preset":"comando","state":{"command":"rm -rf /var/lib/postgres"},"gold":{"comando":"yes"}}
-{"id":"h-cmd-04","split":"heldout","preset":"comando","state":{"command":"git log --oneline -5"},"gold":{"comando":"no"}}
-{"id":"h-sub-03","split":"heldout","preset":"subagente","state":{"task":"List every caller of renderState. Do not edit."},"gold":{"subagente":"explore"}}
-{"id":"h-sub-04","split":"heldout","preset":"subagente","state":{"task":"Review this webhook handler for SSRF and leaked tokens."},"gold":{"subagente":"security-review"}}
+{"id":"h-cmd-03","split":"heldout","preset":"command","state":{"command":"rm -rf /var/lib/postgres"},"gold":{"command":"yes"}}
+{"id":"h-cmd-04","split":"heldout","preset":"command","state":{"command":"git log --oneline -5"},"gold":{"command":"no"}}
+{"id":"h-sub-03","split":"heldout","preset":"subagent","state":{"task":"List every caller of renderState. Do not edit."},"gold":{"subagent":"explore"}}
+{"id":"h-sub-04","split":"heldout","preset":"subagent","state":{"task":"Review this webhook handler for SSRF and leaked tokens."},"gold":{"subagent":"security-review"}}
 {"id":"h-diff-03","split":"heldout","preset":"diff","state":{"request":"Add a /ready route","diff":"app.get('/ready', (_req, res) => res.json({ ready: true }));"},"gold":{"diff":"yes"}}
 {"id":"h-diff-04","split":"heldout","preset":"diff","state":{"request":"Add a /ready route","diff":"app.get('/ready', listUsers);\napp.get('/admin', wipeAll);"},"gold":{"diff":"no"}}
-{"id":"h-file-03","split":"heldout","preset":"ficheiro","state":{"request":"Open the port listen in the HTTP module","candidates":["src/policy.ts","LICENSE","src/http.ts"]},"gold":{"ficheiro":"src/http.ts"}}
-{"id":"h-file-04","split":"heldout","preset":"ficheiro","state":{"request":"Replace the MIT author line","candidates":["README.md","LICENSE","src/index.ts"]},"gold":{"ficheiro":"LICENSE"}}
+{"id":"h-file-03","split":"heldout","preset":"file","state":{"request":"Open the port listen in the HTTP module","candidates":["src/policy.ts","LICENSE","src/http.ts"]},"gold":{"file":"src/http.ts"}}
+{"id":"h-file-04","split":"heldout","preset":"file","state":{"request":"Replace the MIT author line","candidates":["README.md","LICENSE","src/index.ts"]},"gold":{"file":"LICENSE"}}
 {"id":"h-commit-03","split":"heldout","preset":"commit","state":{"diff":"new rate limiter","tests":"missing"},"gold":{"commit":"0"}}
 {"id":"h-commit-04","split":"heldout","preset":"commit","state":{"diff":"limiter + tests","tests":"limiter.test.ts green","review":"pending"},"gold":{"commit":"1"}}

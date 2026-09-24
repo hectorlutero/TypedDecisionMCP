@@ -1,35 +1,35 @@
-{"id":"cmd-01","split":"authored","preset":"comando","state":{"command":"rm -rf node_modules /tmp/build","cwd":"/repo"},"gold":{"comando":"yes"}}
-{"id":"cmd-02","split":"authored","preset":"comando","state":{"command":"git push --force origin main","cwd":"/repo"},"gold":{"comando":"yes"}}
-{"id":"cmd-03","split":"authored","preset":"comando","state":{"command":"drop table users cascade;","cwd":"/repo"},"gold":{"comando":"yes"}}
-{"id":"cmd-04","split":"authored","preset":"comando","state":{"command":"cat src/index.ts","cwd":"/repo"},"gold":{"comando":"no"}}
-{"id":"cmd-05","split":"authored","preset":"comando","state":{"command":"git status","cwd":"/repo"},"gold":{"comando":"no"}}
-{"id":"cmd-06","split":"authored","preset":"comando","state":{"command":"npm test","cwd":"/repo"},"gold":{"comando":"no"}}
-{"id":"cmd-07","split":"authored","preset":"comando","state":{"command":"sudo mkfs.ext4 /dev/sda1","cwd":"/"},"gold":{"comando":"yes"}}
-{"id":"cmd-08","split":"authored","preset":"comando","state":{"command":"ls -la src","cwd":"/repo"},"gold":{"comando":"no"}}
-{"id":"sub-01","split":"authored","preset":"subagente","state":{"task":"Where is the login form rendered? Do not edit files."},"gold":{"subagente":"explore"}}
-{"id":"sub-02","split":"authored","preset":"subagente","state":{"task":"Implement the forgot-password endpoint and wire the route."},"gold":{"subagente":"generalPurpose"}}
-{"id":"sub-03","split":"authored","preset":"subagente","state":{"task":"CI failed on ubuntu-latest: vitest exit 1. Find the cause."},"gold":{"subagente":"ci-investigator"}}
-{"id":"sub-04","split":"authored","preset":"subagente","state":{"task":"How do I add an MCP server in Cursor Settings?"},"gold":{"subagente":"cursor-guide"}}
-{"id":"sub-05","split":"authored","preset":"subagente","state":{"task":"Review this auth diff for injection and leaked secrets."},"gold":{"subagente":"security-review"}}
-{"id":"sub-06","split":"authored","preset":"subagente","state":{"task":"Search the repo for all callers of decideAction. Read only."},"gold":{"subagente":"explore"}}
-{"id":"sub-07","split":"authored","preset":"subagente","state":{"task":"Add a new preset and tests, then update the README."},"gold":{"subagente":"generalPurpose"}}
-{"id":"sub-08","split":"authored","preset":"subagente","state":{"task":"The deploy workflow is red after the last push. Diagnose the failing job."},"gold":{"subagente":"ci-investigator"}}
+{"id":"cmd-01","split":"authored","preset":"command","state":{"command":"rm -rf node_modules /tmp/build","cwd":"/repo"},"gold":{"command":"yes"}}
+{"id":"cmd-02","split":"authored","preset":"command","state":{"command":"git push --force origin main","cwd":"/repo"},"gold":{"command":"yes"}}
+{"id":"cmd-03","split":"authored","preset":"command","state":{"command":"drop table users cascade;","cwd":"/repo"},"gold":{"command":"yes"}}
+{"id":"cmd-04","split":"authored","preset":"command","state":{"command":"cat src/index.ts","cwd":"/repo"},"gold":{"command":"no"}}
+{"id":"cmd-05","split":"authored","preset":"command","state":{"command":"git status","cwd":"/repo"},"gold":{"command":"no"}}
+{"id":"cmd-06","split":"authored","preset":"command","state":{"command":"npm test","cwd":"/repo"},"gold":{"command":"no"}}
+{"id":"cmd-07","split":"authored","preset":"command","state":{"command":"sudo mkfs.ext4 /dev/sda1","cwd":"/"},"gold":{"command":"yes"}}
+{"id":"cmd-08","split":"authored","preset":"command","state":{"command":"ls -la src","cwd":"/repo"},"gold":{"command":"no"}}
+{"id":"sub-01","split":"authored","preset":"subagent","state":{"task":"Where is the login form rendered? Do not edit files."},"gold":{"subagent":"explore"}}
+{"id":"sub-02","split":"authored","preset":"subagent","state":{"task":"Implement the forgot-password endpoint and wire the route."},"gold":{"subagent":"generalPurpose"}}
+{"id":"sub-03","split":"authored","preset":"subagent","state":{"task":"CI failed on ubuntu-latest: vitest exit 1. Find the cause."},"gold":{"subagent":"ci-investigator"}}
+{"id":"sub-04","split":"authored","preset":"subagent","state":{"task":"How do I add an MCP server in Cursor Settings?"},"gold":{"subagent":"cursor-guide"}}
+{"id":"sub-05","split":"authored","preset":"subagent","state":{"task":"Review this auth diff for injection and leaked secrets."},"gold":{"subagent":"security-review"}}
+{"id":"sub-06","split":"authored","preset":"subagent","state":{"task":"Search the repo for all callers of decideAction. Read only."},"gold":{"subagent":"explore"}}
+{"id":"sub-07","split":"authored","preset":"subagent","state":{"task":"Add a new preset and tests, then update the README."},"gold":{"subagent":"generalPurpose"}}
+{"id":"sub-08","split":"authored","preset":"subagent","state":{"task":"The deploy workflow is red after the last push. Diagnose the failing job."},"gold":{"subagent":"ci-investigator"}}
 {"id":"diff-01","split":"authored","preset":"diff","state":{"request":"Rename decide() to runDecision()","diff":"function runDecision() {\n  return decideAction();\n}"},"gold":{"diff":"yes"}}
 {"id":"diff-02","split":"authored","preset":"diff","state":{"request":"Rename decide() to runDecision()","diff":"function decide() {\n  return 1;\n}"},"gold":{"diff":"no"}}
 {"id":"diff-03","split":"authored","preset":"diff","state":{"request":"Add a health endpoint","diff":"app.get('/health', (_req, res) => res.json({ ok: true }));"},"gold":{"diff":"yes"}}
 {"id":"diff-04","split":"authored","preset":"diff","state":{"request":"Add a health endpoint","diff":"app.get('/users', listUsers);"},"gold":{"diff":"no"}}
 {"id":"diff-05","split":"authored","preset":"diff","state":{"request":"Fix the off-by-one in page count","diff":"const pages = Math.ceil(total / pageSize);"},"gold":{"diff":"yes"}}
 {"id":"diff-06","split":"authored","preset":"diff","state":{"request":"Fix the off-by-one in page count","diff":"const pages = total;\nconsole.log('also redesigned the homepage');"},"gold":{"diff":"no"}}
-{"id":"diff-07","split":"authored","preset":"diff","state":{"request":"Document the env var DECIDIR_MODEL","diff":"# DECIDIR_MODEL\nPath to the GGUF file."},"gold":{"diff":"yes"}}
-{"id":"diff-08","split":"authored","preset":"diff","state":{"request":"Document the env var DECIDIR_MODEL","diff":"export const PORT = 3000;"},"gold":{"diff":"no"}}
-{"id":"file-01","split":"authored","preset":"ficheiro","state":{"request":"Change the default auto threshold","candidates":["src/policy.ts","src/index.ts","README.md"]},"gold":{"ficheiro":"src/policy.ts"}}
-{"id":"file-02","split":"authored","preset":"ficheiro","state":{"request":"Add the stdio entrypoint shebang","candidates":["src/policy.ts","src/index.ts","bench/report.ts"]},"gold":{"ficheiro":"src/index.ts"}}
-{"id":"file-03","split":"authored","preset":"ficheiro","state":{"request":"Explain how to fetch the GGUF","candidates":["src/policy.ts","src/index.ts","models/README.md"]},"gold":{"ficheiro":"models/README.md"}}
-{"id":"file-04","split":"authored","preset":"ficheiro","state":{"request":"Parse yesno questions","candidates":["src/contract.ts","examples/cursor.mcp.json","LICENSE"]},"gold":{"ficheiro":"src/contract.ts"}}
-{"id":"file-05","split":"authored","preset":"ficheiro","state":{"request":"Wire the Cursor MCP example JSON","candidates":["src/policy.ts","examples/cursor.mcp.json","bench/logits.ts"]},"gold":{"ficheiro":"examples/cursor.mcp.json"}}
-{"id":"file-06","split":"authored","preset":"ficheiro","state":{"request":"Add the 10x report math","candidates":["src/index.ts","LICENSE","bench/report.ts"]},"gold":{"ficheiro":"bench/report.ts"}}
-{"id":"file-07","split":"authored","preset":"ficheiro","state":{"request":"Change MIT copyright holder","candidates":["src/packs/cursor.ts","LICENSE","bench/logits.ts"]},"gold":{"ficheiro":"LICENSE"}}
-{"id":"file-08","split":"authored","preset":"ficheiro","state":{"request":"Add the comando preset copy","candidates":["src/http.ts","models/README.md","src/packs/cursor.ts"]},"gold":{"ficheiro":"src/packs/cursor.ts"}}
+{"id":"diff-07","split":"authored","preset":"diff","state":{"request":"Document the env var DECIDE_MODEL","diff":"# DECIDE_MODEL\nPath to the GGUF file."},"gold":{"diff":"yes"}}
+{"id":"diff-08","split":"authored","preset":"diff","state":{"request":"Document the env var DECIDE_MODEL","diff":"export const PORT = 3000;"},"gold":{"diff":"no"}}
+{"id":"file-01","split":"authored","preset":"file","state":{"request":"Change the default auto threshold","candidates":["src/policy.ts","src/index.ts","README.md"]},"gold":{"file":"src/policy.ts"}}
+{"id":"file-02","split":"authored","preset":"file","state":{"request":"Add the stdio entrypoint shebang","candidates":["src/policy.ts","src/index.ts","bench/report.ts"]},"gold":{"file":"src/index.ts"}}
+{"id":"file-03","split":"authored","preset":"file","state":{"request":"Explain how to fetch the GGUF","candidates":["src/policy.ts","src/index.ts","models/README.md"]},"gold":{"file":"models/README.md"}}
+{"id":"file-04","split":"authored","preset":"file","state":{"request":"Parse yesno questions","candidates":["src/contract.ts","examples/cursor.mcp.json","LICENSE"]},"gold":{"file":"src/contract.ts"}}
+{"id":"file-05","split":"authored","preset":"file","state":{"request":"Wire the Cursor MCP example JSON","candidates":["src/policy.ts","examples/cursor.mcp.json","bench/logits.ts"]},"gold":{"file":"examples/cursor.mcp.json"}}
+{"id":"file-06","split":"authored","preset":"file","state":{"request":"Add the 10x report math","candidates":["src/index.ts","LICENSE","bench/report.ts"]},"gold":{"file":"bench/report.ts"}}
+{"id":"file-07","split":"authored","preset":"file","state":{"request":"Change MIT copyright holder","candidates":["src/packs/cursor.ts","LICENSE","bench/logits.ts"]},"gold":{"file":"LICENSE"}}
+{"id":"file-08","split":"authored","preset":"file","state":{"request":"Add the command preset copy","candidates":["src/http.ts","models/README.md","src/packs/cursor.ts"]},"gold":{"file":"src/packs/cursor.ts"}}
 {"id":"commit-01","split":"authored","preset":"commit","state":{"diff":"export function add(a,b){return a+b}\n","tests":"none"},"gold":{"commit":"0"}}
 {"id":"commit-02","split":"authored","preset":"commit","state":{"diff":"export function add(a,b){return a+b}\n","tests":"add.test.ts covers add()","review":"pending"},"gold":{"commit":"1"}}
 {"id":"commit-03","split":"authored","preset":"commit","state":{"diff":"export function add(a,b){return a+b}\n","tests":"add.test.ts green","review":"approved"},"gold":{"commit":"2"}}
