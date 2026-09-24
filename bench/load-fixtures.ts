@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Preset } from "../src/contract.js";
 
 export type Fixture = {
   id: string;
   split: "authored" | "heldout";
-  preset: "comando" | "subagente" | "diff" | "ficheiro" | "commit";
+  preset: Preset;
   state: unknown;
   gold: Record<string, string>;
 };

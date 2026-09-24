@@ -1,9 +1,9 @@
 # Cinco hops do Cursor (baseline 10×)
 
-Três chats **novos** por hop (15 no total). Pensa, devolve JSON, **não** chames `decidir`. O conjunto inclui `diff-02` (ouro `no`).
+Três chats **novos** por hop (15 no total). Pensa, devolve JSON, **não** chames `decide`. O conjunto inclui `diff-02` (ouro `no`).
 
 Aceite v1: `method: cursor-ui`. Copia `bench/manual.template.json` → `bench/manual.json` e cola os 3 `samples` por hop. O import tira a mediana.
-Proxy: `method: cursor-subagent` — três hops `ok` (`spawn_ms`), hops em série, `text` obrigatório. Molde `bench/proxy.template.json`. Report só aceita proxy com `DECIDIR_ACCEPT_PROXY=1`.
+Proxy: `method: cursor-subagent` — três hops `ok` (`spawn_ms`), hops em série, `text` obrigatório. Molde `bench/proxy.template.json`. Report só aceita proxy com `DECIDE_ACCEPT_PROXY=1`.
 
 ```bash
 npm run bench:baseline
@@ -11,14 +11,14 @@ npm run bench:report
 ```
 
 
-## 1. cmd-01 (`comando`)
+## 1. cmd-01 (`command`)
 
-Chat **novo**. Sem a tool `decidir`. Cronómetro no envio → último token.
+Chat **novo**. Sem a tool `decide`. Cronómetro no envio → último token.
 
 ### System
 
 ```
-Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
+Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decide.
 ```
 
 ### User
@@ -31,7 +31,7 @@ Think step by step about the decision, then return only JSON answers for the que
     "cwd": "/repo"
   },
   "questions": {
-    "comando": {
+    "command": {
       "type": "yesno",
       "instructions": "Is this shell command destructive (deletes data, formats a disk, force-push, drop, irrecoverable overwrite)?"
     }
@@ -39,14 +39,14 @@ Think step by step about the decision, then return only JSON answers for the que
 }
 ```
 
-## 2. sub-01 (`subagente`)
+## 2. sub-01 (`subagent`)
 
-Chat **novo**. Sem a tool `decidir`. Cronómetro no envio → último token.
+Chat **novo**. Sem a tool `decide`. Cronómetro no envio → último token.
 
 ### System
 
 ```
-Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
+Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decide.
 ```
 
 ### User
@@ -58,7 +58,7 @@ Think step by step about the decision, then return only JSON answers for the que
     "task": "Where is the login form rendered? Do not edit files."
   },
   "questions": {
-    "subagente": {
+    "subagent": {
       "type": "choice",
       "instructions": "Which Cursor subagent_type should run this request?",
       "criteria": {
@@ -75,12 +75,12 @@ Think step by step about the decision, then return only JSON answers for the que
 
 ## 3. diff-02 (`diff`)
 
-Chat **novo**. Sem a tool `decidir`. Cronómetro no envio → último token.
+Chat **novo**. Sem a tool `decide`. Cronómetro no envio → último token.
 
 ### System
 
 ```
-Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
+Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decide.
 ```
 
 ### User
@@ -101,14 +101,14 @@ Think step by step about the decision, then return only JSON answers for the que
 }
 ```
 
-## 4. file-01 (`ficheiro`)
+## 4. file-01 (`file`)
 
-Chat **novo**. Sem a tool `decidir`. Cronómetro no envio → último token.
+Chat **novo**. Sem a tool `decide`. Cronómetro no envio → último token.
 
 ### System
 
 ```
-Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
+Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decide.
 ```
 
 ### User
@@ -125,7 +125,7 @@ Think step by step about the decision, then return only JSON answers for the que
     ]
   },
   "questions": {
-    "ficheiro": {
+    "file": {
       "type": "choice",
       "instructions": "Which of these paths is the right place for this change?",
       "criteria": {
@@ -140,12 +140,12 @@ Think step by step about the decision, then return only JSON answers for the que
 
 ## 5. commit-01 (`commit`)
 
-Chat **novo**. Sem a tool `decidir`. Cronómetro no envio → último token.
+Chat **novo**. Sem a tool `decide`. Cronómetro no envio → último token.
 
 ### System
 
 ```
-Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decidir.
+Think step by step about the decision, then return only JSON answers for the questions. Do not call any tool. Do not use decide.
 ```
 
 ### User

@@ -5,7 +5,7 @@ import { countTokens } from "./token-count.js";
 describe("report math", () => {
   it("uses the same chars/4 ruler when hop text is present", () => {
     const text = "thinking then json";
-    const answers = { comando: { type: "yesno", yes: 1 } };
+    const answers = { command: { type: "yesno", yes: 1 } };
     const paired = pairHops(
       [{ id: "cmd-01", latency_ms: 200, answers }],
       [{ id: "cmd-01", latency_ms: 4000, output_tokens: 99, text }],
@@ -13,7 +13,7 @@ describe("report math", () => {
     );
     expect(paired[0]?.ruler).toBe("chars/4");
     expect(paired[0]?.token).toBe(
-      countTokens(text) / countTokens(JSON.stringify({ comando: { type: "yesno", yes: 1 } }))
+      countTokens(text) / countTokens(JSON.stringify({ command: { type: "yesno", yes: 1 } }))
     );
   });
 
@@ -24,7 +24,9 @@ describe("report math", () => {
     expect(timeGateActive("cursor-ui", false)).toBe(true);
     expect(timeGateActive("cursor-subagent", false)).toBe(false);
     expect(timeGateActive("cursor-subagent", true)).toBe(true);
+    expect(acceptProxy({ DECIDE_ACCEPT_PROXY: "1" })).toBe(true);
     expect(acceptProxy({ DECIDIR_ACCEPT_PROXY: "1" })).toBe(true);
+    expect(acceptProxy({ DECIDE_ACCEPT_PROXY: "0", DECIDIR_ACCEPT_PROXY: "1" })).toBe(false);
     expect(acceptProxy({})).toBe(false);
   });
 });

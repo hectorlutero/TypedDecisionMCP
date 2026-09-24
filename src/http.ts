@@ -5,11 +5,12 @@ import { existsSync } from "node:fs";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { getLogitEngine, isEngineWarm } from "./engine/logits.js";
 import { resolveModelPath } from "./model-path.js";
+import { envFirst } from "./env.js";
 import { createServer } from "./server.js";
 
-const host = process.env.DECIDIR_HTTP_HOST ?? "127.0.0.1";
-const port = Number(process.env.DECIDIR_HTTP_PORT ?? 8788);
-const token = process.env.DECIDIR_HTTP_TOKEN;
+const host = envFirst(process.env, "DECIDE_HTTP_HOST", "DECIDIR_HTTP_HOST") ?? "127.0.0.1";
+const port = Number(envFirst(process.env, "DECIDE_HTTP_PORT", "DECIDIR_HTTP_PORT") ?? 8788);
+const token = envFirst(process.env, "DECIDE_HTTP_TOKEN", "DECIDIR_HTTP_TOKEN");
 
 const http = createHttpServer(async (req, res) => {
   if (req.url === "/health") {

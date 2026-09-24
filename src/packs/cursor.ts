@@ -1,12 +1,14 @@
 import {
   DecideError,
   extractCandidates,
+  normalizePreset,
+  type CanonicalPreset,
   type Preset,
   type Questions,
   type State
 } from "../contract.js";
 
-const SUBAGENTES = {
+const SUBAGENTS = {
   explore: "Search the codebase or answer a question without editing",
   generalPurpose: "Implement or change code across the repo",
   "ci-investigator": "Diagnose a failing CI check or test run",
@@ -14,19 +16,19 @@ const SUBAGENTES = {
   "security-review": "Review a diff for security issues"
 } as const;
 
-export const PACKS: Record<Exclude<Preset, "pacote">, Questions> = {
-  comando: {
-    comando: {
+export const PACKS: Record<Exclude<CanonicalPreset, "bundle">, Questions> = {
+  command: {
+    command: {
       type: "yesno",
       instructions:
         "Is this shell command destructive (deletes data, formats a disk, force-push, drop, irrecoverable overwrite)?"
     }
   },
-  subagente: {
-    subagente: {
+  subagent: {
+    subagent: {
       type: "choice",
       instructions: "Which Cursor subagent_type should run this request?",
-      criteria: { ...SUBAGENTES }
+      criteria: { ...SUBAGENTS }
     }
   },
   diff: {
@@ -35,8 +37,8 @@ export const PACKS: Record<Exclude<Preset, "pacote">, Questions> = {
       instructions: "Does this diff cover the user's request, with no extra unrequested work?"
     }
   },
-  ficheiro: {
-    ficheiro: {
+  file: {
+    file: {
       type: "choice",
       instructions: "Which of these paths is the right place for this change?",
       criteria: { _placeholder: "replaced at resolve time" }
@@ -70,16 +72,16 @@ export function roleForPath(path: string): string {
   return base;
 }
 
-function ficheiroQuestions(state: State): Questions {
+function fileQuestions(state: State): Questions {
   const candidates = extractCandidates(state);
   if (candidates.length < 2 || candidates.length > 20) {
     throw new DecideError(
       "invalid_request",
-      "preset ficheiro requires state.candidates: string[] with 2 to 20 paths"
+      "preset file requires state.candidates: string[] with 2 to 20 paths"
     );
   }
   return {
-    ficheiro: {
+    file: {
       type: "choice",
       instructions: "Which of these paths is the right place for this change?",
       criteria: Object.fromEntries(candidates.map((path) => [path, roleForPath(path)]))
@@ -88,17 +90,18 @@ function ficheiroQuestions(state: State): Questions {
 }
 
 export function questionsForPreset(preset: Preset, state: State): Questions {
-  if (preset === "ficheiro") return ficheiroQuestions(state);
-  if (preset === "pacote") {
+  const canonical = normalizePreset(preset);
+  if (canonical === "file") return fileQuestions(state);
+  if (canonical === "bundle") {
     return {
-      ...PACKS.comando,
-      ...PACKS.subagente,
+      ...PACKS.command,
+      ...PACKS.subagent,
       ...PACKS.diff,
-      ...ficheiroQuestions(state),
+      ...fileQuestions(state),
       ...PACKS.commit
     };
   }
-  return { ...PACKS[preset] };
+  return { ...PACKS[canonical] };
 }
 
 export function resolveQuestions(

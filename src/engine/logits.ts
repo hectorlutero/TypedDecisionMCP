@@ -14,6 +14,7 @@ import { modelId, resolveModelPath } from "../model-path.js";
 import { divideByPrior, optionMass, priorCacheKey } from "./calibrate.js";
 import { buildPrompt, optionSpecs, wrapForModel, type OptionSpec } from "./prompt.js";
 import { optionTokenIds } from "./tokenize.js";
+import { envFirst } from "../env.js";
 import { PACKS } from "../packs/cursor.js";
 
 export type ScoreResult = {
@@ -52,12 +53,12 @@ function asProbList(raw: unknown): Array<{ token: number; probability: number }>
 }
 
 function calibrateEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.DECIDIR_CALIBRATE !== "0";
+  return envFirst(env, "DECIDE_CALIBRATE", "DECIDIR_CALIBRATE") !== "0";
 }
 
-/** `DECIDIR_GPU=0|cpu|false` forces CPU (needed when Vulkan OOMs on small laptop GPUs). */
+/** `DECIDE_GPU=0|cpu|false` forces CPU (needed when Vulkan OOMs on small laptop GPUs). */
 function resolveGpuOption(env: NodeJS.ProcessEnv = process.env): "auto" | false | "cuda" | "vulkan" | "metal" {
-  const raw = (env.DECIDIR_GPU ?? "auto").toLowerCase();
+  const raw = (envFirst(env, "DECIDE_GPU", "DECIDIR_GPU") ?? "auto").toLowerCase();
   if (raw === "0" || raw === "false" || raw === "cpu" || raw === "off") return false;
   if (raw === "cuda" || raw === "vulkan" || raw === "metal") return raw;
   return "auto";
@@ -107,7 +108,7 @@ export class LogitEngine implements DecisionEngine {
 
   private async warmPriors(): Promise<void> {
     const model = this.requireModel();
-    const questions: Question[] = [PACKS.comando.comando, PACKS.commit.commit];
+    const questions: Question[] = [PACKS.command.command, PACKS.commit.commit];
     if (PACKS.diff.diff.type === "yesno") questions.push(PACKS.diff.diff);
     for (const question of questions) {
       const options = optionSpecs(question);
@@ -130,7 +131,7 @@ export class LogitEngine implements DecisionEngine {
     const answers: Answers = {};
     let promptTokens = 0;
 
-    const trace = process.env.DECIDIR_TRACE === "1";
+    const trace = envFirst(process.env, "DECIDE_TRACE", "DECIDIR_TRACE") === "1";
     for (const [id, question] of Object.entries(questions)) {
       const t0 = performance.now();
       const options = optionSpecs(question);
@@ -211,7 +212,7 @@ export class LogitEngine implements DecisionEngine {
   /**
    * Reuse KV for the longest matching prompt prefix (Qwen envelope, and State when unchanged).
    * Falls back to a full eval when nothing overlaps (`adaptStateToTokens` + empty suffix).
-   * Set `DECIDIR_KV=0` to force clearHistory every hop (ablation / debug).
+   * Set `DECIDE_KV=0` to force clearHistory every hop (ablation / debug).
    */
   private async nextTokenProbs(tokens: number[]): Promise<{ probs: ProbMap; prefix_reuse: number }> {
     const seq = this.requireSequence();
@@ -222,7 +223,7 @@ export class LogitEngine implements DecisionEngine {
     const prefix = tokens.slice(0, -1);
     let prefix_reuse = 0;
     let suffix = prefix;
-    if (process.env.DECIDIR_KV === "0") {
+    if (envFirst(process.env, "DECIDE_KV", "DECIDIR_KV") === "0") {
       await seq.clearHistory();
     } else {
       await seq.adaptStateToTokens(prefix as never, false);

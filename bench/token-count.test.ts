@@ -13,7 +13,7 @@ describe("token-count", () => {
 
   it("drops probabilities and legend from the 10x transcript", () => {
     const compact = compactDecisionAnswers({
-      ficheiro: {
+      file: {
         type: "choice",
         choice: "src/policy.ts",
         probabilities: { "src/policy.ts": 0.9, "src/index.ts": 0.1 },
@@ -28,7 +28,7 @@ describe("token-count", () => {
       }
     });
     expect(compact).toEqual({
-      ficheiro: { type: "choice", choice: "src/policy.ts" },
+      file: { type: "choice", choice: "src/policy.ts" },
       commit: { type: "score", score: 0.2 }
     });
   });

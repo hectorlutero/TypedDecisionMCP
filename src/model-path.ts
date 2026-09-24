@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { envFirst } from "./env.js";
 
 export type ModelTier = "0.6B" | "1.7B" | "4B";
 
@@ -32,9 +33,9 @@ export const MODEL_CATALOG: Record<ModelTier, ModelSpec> = {
 };
 
 export function resolveTier(env: NodeJS.ProcessEnv = process.env): ModelTier {
-  const raw = env.DECIDIR_TIER ?? "0.6B";
+  const raw = envFirst(env, "DECIDE_TIER", "DECIDIR_TIER") ?? "0.6B";
   if (raw === "0.6B" || raw === "1.7B" || raw === "4B") return raw;
-  throw new Error(`DECIDIR_TIER must be 0.6B, 1.7B, or 4B (got ${raw})`);
+  throw new Error(`DECIDE_TIER must be 0.6B, 1.7B, or 4B (got ${raw})`);
 }
 
 export function activeSpec(env: NodeJS.ProcessEnv = process.env): ModelSpec {
@@ -58,7 +59,8 @@ export function modelId(env: NodeJS.ProcessEnv = process.env): string {
 }
 
 export function resolveModelPath(env: NodeJS.ProcessEnv = process.env): string {
-  if (env.DECIDIR_MODEL) return env.DECIDIR_MODEL;
+  const model = envFirst(env, "DECIDE_MODEL", "DECIDIR_MODEL");
+  if (model) return model;
   return join(homedir(), ".cache", "TypedDecisionMCP", activeSpec(env).file);
 }
 

@@ -1,3 +1,4 @@
+import { envFirst } from "../src/env.js";
 import { isLatencyValid } from "./spawn.js";
 import { hopTokens, transcriptTokens } from "./token-count.js";
 
@@ -18,7 +19,7 @@ export type LogitsRow = {
 };
 
 export function acceptProxy(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.DECIDIR_ACCEPT_PROXY === "1";
+  return envFirst(env, "DECIDE_ACCEPT_PROXY", "DECIDIR_ACCEPT_PROXY") === "1";
 }
 
 export function timeGateActive(method: BaselineMethod, hasSpawn: boolean): boolean {
