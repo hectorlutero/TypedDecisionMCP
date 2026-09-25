@@ -110,6 +110,8 @@ Esse campo é o próximo capítulo. Os números de lab não o substituem.
 
 _A preencher após 1–2 semanas de testes no plugin, em vários modelos._
 
+Roteiros: [roteiros-economia-campo.md](roteiros-economia-campo.md) (R1–R8). Log: `bench/campo/log.jsonl`.
+
 -
 -
 -

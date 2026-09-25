@@ -36,6 +36,7 @@
     "bench:cost": "tsx bench/cost-report.ts",
     "bench:day1-prefill": "tsx bench/day1-prefill.ts",
     "bench:day2-prefix-kv": "tsx bench/day2-prefix-kv.ts",
+    "bench:campo": "tsx bench/campo/summarize.ts",
     "train:sweep-lambda": "tsx train/sweep-lambda.ts",
     "train:joint": "tsx train/joint.ts",
     "bench:baseline": "tsx bench/baseline.ts",
