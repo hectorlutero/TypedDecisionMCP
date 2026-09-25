@@ -11,6 +11,15 @@ export type ModelSpec = {
   sha256: string;
 };
 
+/** Ship default: MiniLM embedding GGUF for head-mlp. */
+export const DEFAULT_MODEL_SPEC: ModelSpec = {
+  file: "all-MiniLM-L6-v2-Q8_0.gguf",
+  repo: "second-state/All-MiniLM-L6-v2-Embedding-GGUF",
+  url: "https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF/resolve/main/all-MiniLM-L6-v2-Q8_0.gguf",
+  sha256: "263215c3cadd6e16740741a7624ab4cbb6c8e777688bd5331ecfbf5681c2f8ed"
+};
+
+/** Qwen logits / override tiers via DECIDE_TIER. */
 export const MODEL_CATALOG: Record<ModelTier, ModelSpec> = {
   "0.6B": {
     file: "Qwen3-0.6B-Q8_0.gguf",
@@ -39,19 +48,22 @@ export function resolveTier(env: NodeJS.ProcessEnv = process.env): ModelTier {
 }
 
 export function activeSpec(env: NodeJS.ProcessEnv = process.env): ModelSpec {
-  return MODEL_CATALOG[resolveTier(env)];
+  if (envFirst(env, "DECIDE_TIER", "DECIDIR_TIER")) {
+    return MODEL_CATALOG[resolveTier(env)];
+  }
+  return DEFAULT_MODEL_SPEC;
 }
 
 /** @deprecated prefer resolveModelPath / activeSpec */
-export const MODEL_FILE = MODEL_CATALOG["0.6B"].file;
+export const MODEL_FILE = DEFAULT_MODEL_SPEC.file;
 /** @deprecated prefer activeSpec */
-export const MODEL_REPO = MODEL_CATALOG["0.6B"].repo;
+export const MODEL_REPO = DEFAULT_MODEL_SPEC.repo;
 /** @deprecated prefer activeSpec */
-export const MODEL_URL = MODEL_CATALOG["0.6B"].url;
+export const MODEL_URL = DEFAULT_MODEL_SPEC.url;
 /** @deprecated prefer activeSpec */
-export const MODEL_SHA256 = MODEL_CATALOG["0.6B"].sha256;
+export const MODEL_SHA256 = DEFAULT_MODEL_SPEC.sha256;
 /** @deprecated prefer modelId() */
-export const MODEL_ID = `${MODEL_CATALOG["0.6B"].repo}/${MODEL_CATALOG["0.6B"].file}`;
+export const MODEL_ID = `${DEFAULT_MODEL_SPEC.repo}/${DEFAULT_MODEL_SPEC.file}`;
 
 export function modelId(env: NodeJS.ProcessEnv = process.env): string {
   const override = envFirst(env, "DECIDE_MODEL_ID", "DECIDIR_MODEL_ID");

@@ -12,11 +12,11 @@ describe("fewShotEnabled", () => {
 });
 
 describe("engineKind", () => {
-  it("stays logits unless DECIDE_ENGINE is head-mlp", () => {
-    expect(engineKind({})).toBe("logits");
-    expect(engineKind({ DECIDE_ENGINE: "logits" })).toBe("logits");
+  it("defaults to head-mlp; DECIDE_ENGINE=logits opts into logits", () => {
+    expect(engineKind({})).toBe("head-mlp");
     expect(engineKind({ DECIDE_ENGINE: "head-mlp" })).toBe("head-mlp");
-    expect(engineKind({ DECIDIR_ENGINE: "head-mlp" })).toBe("head-mlp");
+    expect(engineKind({ DECIDE_ENGINE: "logits" })).toBe("logits");
+    expect(engineKind({ DECIDIR_ENGINE: "logits" })).toBe("logits");
     expect(engineKind({ DECIDE_ENGINE: "logits", DECIDIR_ENGINE: "head-mlp" })).toBe("logits");
   });
 });

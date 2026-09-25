@@ -11,5 +11,5 @@ export function fewShotEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
 }
 
 export function engineKind(env: NodeJS.ProcessEnv = process.env): "logits" | "head-mlp" {
-  return envFirst(env, "DECIDE_ENGINE", "DECIDIR_ENGINE") === "head-mlp" ? "head-mlp" : "logits";
+  return envFirst(env, "DECIDE_ENGINE", "DECIDIR_ENGINE") === "logits" ? "logits" : "head-mlp";
 }
