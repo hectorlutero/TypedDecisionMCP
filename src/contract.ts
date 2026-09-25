@@ -2,7 +2,13 @@ import { z } from "zod";
 
 export const yesnoQuestionSchema = z.object({
   type: z.literal("yesno"),
-  instructions: z.string().min(1)
+  instructions: z.string().min(1),
+  options: z
+    .object({
+      yes: z.string().min(1),
+      no: z.string().min(1)
+    })
+    .optional()
 });
 
 export const choiceQuestionSchema = z.object({
@@ -36,14 +42,49 @@ export const stateSchema = z.union([
   z.array(z.unknown()).min(1)
 ]);
 
+export const canonicalPresetSchema = z.enum([
+  "command",
+  "subagent",
+  "diff",
+  "file",
+  "commit",
+  "bundle"
+]);
+
 export const presetSchema = z.enum([
+  "command",
+  "subagent",
+  "diff",
+  "file",
+  "commit",
+  "bundle",
   "comando",
   "subagente",
-  "diff",
   "ficheiro",
-  "commit",
   "pacote"
 ]);
+
+const PRESET_TO_CANONICAL = {
+  command: "command",
+  comando: "command",
+  subagent: "subagent",
+  subagente: "subagent",
+  diff: "diff",
+  file: "file",
+  ficheiro: "file",
+  commit: "commit",
+  bundle: "bundle",
+  pacote: "bundle"
+} as const;
+
+export type CanonicalPreset = z.infer<typeof canonicalPresetSchema>;
+
+export function normalizePreset(preset: Preset): CanonicalPreset;
+export function normalizePreset(preset: Preset | undefined): CanonicalPreset | undefined;
+export function normalizePreset(preset: Preset | undefined): CanonicalPreset | undefined {
+  if (preset === undefined) return undefined;
+  return PRESET_TO_CANONICAL[preset];
+}
 
 export const decideInputSchema = z
   .object({
@@ -84,7 +125,7 @@ export const answerSchema = z.discriminatedUnion("type", [
 export const actionSchema = z.enum(["auto", "review", "stop"]);
 
 export const decideOutputSchema = z.object({
-  engine: z.literal("logits"),
+  engine: z.enum(["logits", "head-mlp"]),
   model: z.string(),
   answers: z.record(z.string(), answerSchema),
   action: actionSchema,

@@ -1,16 +1,14 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { decide } from "../src/decide.js";
-import { LogitEngine } from "../src/engine/logits.js";
+import { decide, getDecisionEngine } from "../src/decide.js";
 import { loadFixtures } from "./load-fixtures.js";
 import { goldHits } from "./score-gold.js";
 
 const outDir = dirname(fileURLToPath(import.meta.url));
 
 async function main(): Promise<void> {
-  const engine = new LogitEngine();
-  await engine.init();
+  const engine = await getDecisionEngine();
   const rows = [];
   try {
     for (const fixture of loadFixtures()) {

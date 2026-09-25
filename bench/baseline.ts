@@ -1,25 +1,40 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderState } from "../src/contract.js";
-import { resolveQuestions } from "../src/packs/cursor.js";
+import { HOP_IDS } from "./hop-ids.js";
+import { HOP_SYSTEM_PROMPT, hopUserPrompt } from "./hop-prompt.js";
+import { importManualFile } from "./import-manual.js";
 import { loadFixtures } from "./load-fixtures.js";
 
 /**
- * Measures a "Cursor thinks the if" hop: one chat completion that must
- * reason and return JSON. Runtime of TypedDecisionMCP never calls this.
+ * Records the 10× defendant: a Cursor hop that thinks the if and writes JSON.
+ * Runtime of TypedDecisionMCP never calls this.
+ *
+ * Without BENCH_BASELINE_API_KEY, imports bench/manual.json (five hops measured
+ * in Cursor). That is the path that still counts as measured.
  */
 async function main(): Promise<void> {
+  const dest = join(dirname(fileURLToPath(import.meta.url)), "baseline.json");
   const key = process.env.BENCH_BASELINE_API_KEY;
+  if (!key) {
+    try {
+      const written = importManualFile();
+      console.log(written);
+      return;
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : err);
+      console.error("Measure the five hops in Cursor (see bench/hop-prompts.md), fill bench/manual.json, rerun.");
+      process.exit(2);
+    }
+  }
+
   const baseUrl = (process.env.BENCH_BASELINE_BASE_URL ?? "https://api.openai.com/v1").replace(/\/$/, "");
   const model = process.env.BENCH_BASELINE_MODEL ?? "gpt-4o";
-  if (!key) {
-    console.error("BENCH_BASELINE_API_KEY is required to record a measured baseline.");
-    process.exit(2);
-  }
+  const byId = new Map(loadFixtures("authored").map((row) => [row.id, row]));
   const rows = [];
-  for (const fixture of loadFixtures("authored")) {
-    const questions = resolveQuestions(fixture.state as never, fixture.preset, undefined);
+  for (const id of HOP_IDS) {
+    const fixture = byId.get(id);
+    if (!fixture) throw new Error(`missing hop fixture ${id}`);
     const started = performance.now();
     const res = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
@@ -30,18 +45,8 @@ async function main(): Promise<void> {
       body: JSON.stringify({
         model,
         messages: [
-          {
-            role: "system",
-            content:
-              "Think step by step about the decision, then return only JSON answers for the questions."
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              state: renderState(fixture.state as never),
-              questions
-            })
-          }
+          { role: "system", content: HOP_SYSTEM_PROMPT },
+          { role: "user", content: hopUserPrompt(fixture) }
         ]
       })
     });
@@ -62,17 +67,17 @@ async function main(): Promise<void> {
   }
   const out = {
     source: "measured" as const,
+    method: "api-hop",
     model,
     recorded_at: new Date().toISOString(),
     rows
   };
-  const dest = join(dirname(fileURLToPath(import.meta.url)), "baseline.json");
   mkdirSync(dirname(dest), { recursive: true });
   writeFileSync(dest, JSON.stringify(out, null, 2));
   console.log(dest);
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(err instanceof Error ? err.message : err);
   process.exit(1);
 });

@@ -1,4 +1,5 @@
 import {
+  normalizePreset,
   parseDecideInput,
   type DecideInput,
   type DecideOutput,
@@ -6,20 +7,27 @@ import {
   type State
 } from "./contract.js";
 import { getLogitEngine, type DecisionEngine } from "./engine/logits.js";
-import { resolveQuestions } from "./packs/cursor.js";
+import { engineKind } from "./env.js";
+import { getHeadMlpEngine } from "./engine/head-mlp.js";
+import { resolvePack, resolveQuestions } from "./packs/cursor.js";
 import { decideAction } from "./policy.js";
+
+export async function getDecisionEngine(): Promise<DecisionEngine> {
+  if (engineKind() === "head-mlp") return getHeadMlpEngine();
+  return getLogitEngine();
+}
 
 export async function decide(
   raw: unknown,
   engine?: DecisionEngine
 ): Promise<DecideOutput> {
   const input = parseDecideInput(raw);
-  const questions = resolveQuestions(input.state, input.preset, input.questions);
-  const resolved = engine ?? (await getLogitEngine());
-  const scored = await resolved.score(input.state, questions);
+  const pack = resolvePack(input.state, normalizePreset(input.preset), input.questions);
+  const resolved = engine ?? (await getDecisionEngine());
+  const scored = await resolved.score(pack.view, pack.questions);
   const { action, reasons } = decideAction(scored.answers);
   return {
-    engine: "logits",
+    engine: scored.engine,
     model: scored.model,
     answers: scored.answers,
     action,
@@ -30,5 +38,5 @@ export async function decide(
 }
 
 export function previewQuestions(state: State, input: DecideInput): Questions {
-  return resolveQuestions(state, input.preset, input.questions);
+  return resolveQuestions(state, normalizePreset(input.preset), input.questions);
 }

@@ -17,7 +17,8 @@
     "examples",
     "cursor",
     "README.md",
-    "PLAN.md"
+    "PLAN.md",
+    "PLAN-melhorias.md"
   ],
   "engines": {
     "node": ">=20"
@@ -32,9 +33,23 @@
     "typecheck": "tsc --noEmit",
     "fetch-model": "tsx src/fetch-model.ts",
     "bench:logits": "tsx bench/logits.ts",
+    "bench:cost": "tsx bench/cost-report.ts",
+    "bench:day1-prefill": "tsx bench/day1-prefill.ts",
+    "bench:day2-prefix-kv": "tsx bench/day2-prefix-kv.ts",
+    "train:sweep-lambda": "tsx train/sweep-lambda.ts",
+    "train:joint": "tsx train/joint.ts",
     "bench:baseline": "tsx bench/baseline.ts",
+    "bench:baseline:prompts": "tsx bench/write-hop-prompts.ts",
+    "bench:baseline:pack": "tsx bench/pack-proxy-run.ts",
     "bench:report": "tsx bench/report.ts",
-    "check:independent": "node scripts/check-independent.mjs"
+    "bench:ui-log": "tsx bench/ui-log.ts",
+    "bench:ui-watch": "tsx bench/ui-watch.ts",
+    "bench:ui-reset": "tsx bench/ui-reset.ts",
+    "bench:ui-probe": "tsx bench/ui-probe.ts",
+    "bench:ui-import": "tsx bench/import-cursor-ui.ts",
+    "check:independent": "node scripts/check-independent.mjs",
+    "smoke:embedding": "tsx bench/smoke-embedding.ts",
+    "train:head": "tsx train/head.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.4",

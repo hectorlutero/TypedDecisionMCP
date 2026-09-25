@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { acceptProxy, gate10x, pairHops, qualityOk, timeGateActive, type BaselineMethod } from "./report-math.js";
+import { median } from "./spawn.js";
 
 type LogitsFile = {
   rows: Array<{
@@ -15,17 +17,19 @@ type LogitsFile = {
 
 type BaselineFile = {
   source: string;
-  rows: Array<{ id: string; latency_ms: number; output_tokens: number }>;
+  method?: string;
+  tokenizer?: string;
+  spawn_ms?: number[];
+  rows: Array<{
+    id: string;
+    latency_ms: number;
+    latency_raw_ms?: number;
+    output_tokens: number;
+    text?: string;
+  }>;
 };
 
 const root = dirname(fileURLToPath(import.meta.url));
-
-function median(values: number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2 : (sorted[mid] ?? 0);
-}
 
 function main(): void {
   const logitsPath = join(root, "out/logits.json");
@@ -44,30 +48,10 @@ function main(): void {
   const heldAcc = heldN ? heldHits / heldN : 0;
   const gen = authored.every((row) => row.generated_tokens === 0);
   const p50 = median(authored.map((row) => row.latency_ms));
+  const quality = qualityOk(acc, gen);
 
   const baselinePath = join(root, "baseline.json");
-  let tokenRatio: number | null = null;
-  let timeRatio: number | null = null;
-  let baselineSource = "missing";
-  if (existsSync(baselinePath)) {
-    const baseline = JSON.parse(readFileSync(baselinePath, "utf8")) as BaselineFile;
-    baselineSource = baseline.source;
-    const byId = new Map(baseline.rows.map((row) => [row.id, row]));
-    const paired = authored
-      .map((row) => {
-        const base = byId.get(row.id);
-        if (!base) return null;
-        const transcript = Math.max(1, Math.ceil(JSON.stringify(row.answers ?? {}).length / 4));
-        return {
-          token: base.output_tokens / transcript,
-          time: base.latency_ms / Math.max(1, row.latency_ms)
-        };
-      })
-      .filter((row): row is { token: number; time: number } => row !== null);
-    const tokenWins = paired.filter((row) => row.token >= 10).length;
-    const timeWins = paired.filter((row) => row.time >= 10).length;
-    tokenRatio = paired.length ? tokenWins / paired.length : 0;
-    timeRatio = paired.length ? timeWins / paired.length : 0;
+  if (!existsSync(baselinePath)) {
     console.log(
       JSON.stringify(
         {
@@ -75,25 +59,38 @@ function main(): void {
           heldout_acc: heldAcc,
           generated_tokens_zero: gen,
           p50_ms: p50,
-          baseline_source: baselineSource,
-          fixtures_token_10x: `${tokenWins}/${paired.length}`,
-          fixtures_time_10x: `${timeWins}/${paired.length}`
+          baseline_source: "missing",
+          note: "10x ratios require a measured bench/baseline.json"
         },
         null,
         2
       )
     );
-    const tokenOk = tokenWins / paired.length >= 0.8;
-    const timeOk = timeWins / paired.length >= 0.8;
-    if (baseline.source !== "measured") {
-      console.error("baseline.json is not source=measured; 10x gate not accepted");
-      process.exit(1);
-    }
-    if (!(acc >= 0.75 && gen && tokenOk && timeOk)) {
-      process.exit(1);
-    }
-    return;
+    process.exit(quality ? 0 : 1);
   }
+
+  const baseline = JSON.parse(readFileSync(baselinePath, "utf8")) as BaselineFile;
+  const method = baseline.method as BaselineMethod | undefined;
+  const proxyOk = method === "cursor-ui" || (method === "cursor-subagent" && acceptProxy());
+  const methodOk = baseline.source === "measured" && (method === "cursor-ui" || method === "cursor-subagent") && proxyOk;
+
+  if (method === "cursor-subagent") {
+    const missingText = baseline.rows.filter((row) => !row.text?.length);
+    if (missingText.length) {
+      console.error("cursor-subagent baseline requires text on every hop");
+      process.exit(1);
+    }
+  }
+
+  const paired = methodOk ? pairHops(authored, baseline.rows, method) : [];
+  const clockOk = paired.filter((row) => row.validClock);
+  const tokenWins = clockOk.filter((row) => row.token >= 10).length;
+  const timeWins = clockOk.filter((row) => row.time >= 10).length;
+  const n = clockOk.length;
+  const tokenOk = gate10x(tokenWins, n);
+  const timeActive = methodOk && timeGateActive(method, Boolean(baseline.spawn_ms?.length === 3));
+  const timeStatus = !timeActive ? "skipped" : gate10x(timeWins, n) ? "passed" : "failed";
+  const mixedRuler = paired.some((row) => row.ruler === "ui");
 
   console.log(
     JSON.stringify(
@@ -102,14 +99,33 @@ function main(): void {
         heldout_acc: heldAcc,
         generated_tokens_zero: gen,
         p50_ms: p50,
-        baseline_source: baselineSource,
-        note: "10x ratios require a measured bench/baseline.json"
+        baseline_source: baseline.source,
+        baseline_method: method ?? "missing",
+        tokenizer: baseline.tokenizer ?? null,
+        token_ruler: mixedRuler ? "mixed" : "chars/4",
+        fixtures_token_10x: methodOk ? `${tokenWins}/${n}` : "0/0",
+        fixtures_time_10x: timeActive ? `${timeWins}/${n}` : "skipped",
+        time_gate: timeStatus
       },
       null,
       2
     )
   );
-  if (!(acc >= 0.75 && gen)) process.exit(1);
+
+  if (baseline.source !== "measured") {
+    console.error("baseline.json is not source=measured; 10x gate not accepted");
+    process.exit(1);
+  }
+  if (method !== "cursor-ui" && method !== "cursor-subagent") {
+    console.error("baseline.method must be cursor-ui or cursor-subagent");
+    process.exit(1);
+  }
+  if (method === "cursor-subagent" && !acceptProxy()) {
+    console.error("cursor-subagent proxy requires DECIDE_ACCEPT_PROXY=1");
+    process.exit(1);
+  }
+  if (!quality || !tokenOk) process.exit(1);
+  if (timeStatus === "failed") process.exit(1);
 }
 
 main();

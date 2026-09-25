@@ -1,0 +1,54 @@
+{
+  "source": "measured",
+  "method": "cursor-ui",
+  "tokenizer": "chars/4",
+  "model": "grok-4.7",
+  "recorded_at": "2026-09-23T18:37:33.781Z",
+  "rows": [
+    {
+      "id": "cmd-01",
+      "split": "authored",
+      "preset": "command",
+      "latency_ms": 7198,
+      "output_tokens": 43,
+      "prompt_tokens": 0,
+      "text": "I will analyze the command step by step and return only JSON.\n\nThe command is destructive. `rm -rf` irreversibly deletes directories and their contents.\n\n{\"comando\":\"yes\"}"
+    },
+    {
+      "id": "sub-01",
+      "split": "authored",
+      "preset": "subagent",
+      "latency_ms": 5144,
+      "output_tokens": 48,
+      "prompt_tokens": 0,
+      "text": "I will analyze the decision step by step and return only JSON answers.\n\nThe request is a codebase search without file edits. The correct subagent type is \"explore\".\n\n{\"subagente\":\"explore\"}"
+    },
+    {
+      "id": "diff-02",
+      "split": "authored",
+      "preset": "diff",
+      "latency_ms": 3844,
+      "output_tokens": 49,
+      "prompt_tokens": 0,
+      "text": "Evaluating whether the diff covers renaming decide() to runDecision() without extra work.\n\nThe diff does not rename the function. It still defines `decide()`. The answer is \"no\".\n\n{\"diff\":\"no\"}"
+    },
+    {
+      "id": "file-01",
+      "split": "authored",
+      "preset": "file",
+      "latency_ms": 5572,
+      "output_tokens": 83,
+      "prompt_tokens": 0,
+      "text": "Evaluating the three candidate files to determine the correct location for changing the default auto threshold.\n\nThe default auto threshold belongs in src/policy.ts. That file's criteria explicitly cover auto, review, and stop thresholds.\n\nPreparing the JSON answer for the \"ficheiro\" choice question.\n\n{\"ficheiro\":\"src/policy.ts\"}"
+    },
+    {
+      "id": "commit-01",
+      "split": "authored",
+      "preset": "commit",
+      "latency_ms": 6682,
+      "output_tokens": 80,
+      "prompt_tokens": 0,
+      "text": "I will analyze the diff and answer the question in JSON format.\n\nThe diff has no tests. The correct label is \"missing tests — not ready\". I am preparing the JSON response.\n\nThe JSON answer uses the exact em dash from the criteria. The commit key maps directly to the chosen label.\n\n{\"commit\":\"missing tests — not ready\"}"
+    }
+  ]
+}

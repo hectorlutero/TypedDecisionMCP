@@ -1,0 +1,176 @@
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { HOP_FINGERPRINTS, HOP_IDS, type HopId } from "./hop-ids.js";
+
+export type CursorComposer = {
+  composerId: string;
+  createdAt?: number;
+  lastUpdatedAt?: number;
+  status?: string;
+  model?: string;
+  userText: string;
+  assistantText: string;
+  userCreatedAt?: number;
+  assistantCreatedAt?: number;
+  turnDurationMs?: number;
+};
+
+export type CursorHopHit = {
+  id: HopId;
+  composerId: string;
+  latency_ms: number;
+  text: string;
+  model?: string;
+  clock: "cursor-db";
+};
+
+export function cursorDbCandidates(home = homedir(), env = process.env): string[] {
+  return [
+    join(home, "Library", "Application Support", "Cursor", "User", "globalStorage", "state.vscdb"),
+    join(home, ".config", "Cursor", "User", "globalStorage", "state.vscdb"),
+    env.APPDATA ? join(env.APPDATA, "Cursor", "User", "globalStorage", "state.vscdb") : ""
+  ].filter((path) => path.length > 0);
+}
+
+export function resolveCursorDb(home = homedir(), env = process.env): string | undefined {
+  return cursorDbCandidates(home, env).find((path) => existsSync(path));
+}
+
+export function bubbleText(bubble: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const key of ["text", "richText", "rawText", "content", "markdown"]) {
+    const value = bubble[key];
+    if (typeof value === "string" && value.length > 0) parts.push(value);
+  }
+  try {
+    parts.push(JSON.stringify(bubble));
+  } catch {
+    /* ignore */
+  }
+  return parts.join("\n");
+}
+
+export function textHasFingerprint(haystack: string, needle: string): boolean {
+  return haystack.includes(needle);
+}
+
+export function matchedHopIds(userText: string): HopId[] {
+  return HOP_IDS.filter((id) => HOP_FINGERPRINTS[id].some((needle) => textHasFingerprint(userText, needle)));
+}
+
+export function matchHopId(userText: string): HopId | undefined {
+  const ids = matchedHopIds(userText);
+  return ids.length === 1 ? ids[0] : undefined;
+}
+
+export const MAX_HOP_MS = 3 * 60 * 1000;
+
+export function hopSpanMs(row: {
+  createdAt?: number;
+  lastUpdatedAt?: number;
+  userCreatedAt?: number;
+  assistantCreatedAt?: number;
+}): number | undefined {
+  const end = row.lastUpdatedAt ?? row.assistantCreatedAt;
+  const start = row.userCreatedAt ?? row.createdAt;
+  if (end == null || start == null) return undefined;
+  return end - start;
+}
+
+export function hopLatencyMs(row: {
+  createdAt?: number;
+  lastUpdatedAt?: number;
+  userCreatedAt?: number;
+  assistantCreatedAt?: number;
+  turnDurationMs?: number;
+}): number | undefined {
+  const turn = row.turnDurationMs;
+  if (typeof turn === "number" && turn > 0 && turn <= MAX_HOP_MS) return turn;
+  const ms = hopSpanMs(row);
+  if (ms == null) return undefined;
+  if (ms === 0) return 1;
+  if (!(ms > 0) || ms > MAX_HOP_MS) return undefined;
+  return ms;
+}
+
+function thinkingOf(bubble: Record<string, unknown>): string {
+  const thinking = bubble.thinking;
+  if (thinking && typeof thinking === "object" && typeof (thinking as { text?: unknown }).text === "string") {
+    return (thinking as { text: string }).text.trim();
+  }
+  return "";
+}
+
+export function skipReason(composer: CursorComposer): string | undefined {
+  const ids = matchedHopIds(composer.userText);
+  if (ids.length === 0) return "sem texto do hop";
+  if (ids.length > 1) return `vários hops (${ids.join(",")})`;
+  if (!composer.assistantText.trim()) return "ainda sem resposta";
+  if (hopLatencyMs(composer) == null) return "sem relógio";
+  return undefined;
+}
+
+export function toHopHit(composer: CursorComposer): CursorHopHit | undefined {
+  const id = matchHopId(composer.userText);
+  if (!id || !composer.assistantText.trim()) return undefined;
+  const latency_ms = hopLatencyMs(composer);
+  if (latency_ms == null) return undefined;
+  return {
+    id,
+    composerId: composer.composerId,
+    latency_ms,
+    text: composer.assistantText.trim(),
+    model: composer.model,
+    clock: "cursor-db"
+  };
+}
+
+export function parseMs(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  if (typeof value === "string" && value.length > 0) {
+    const asNum = Number(value);
+    if (Number.isFinite(asNum) && asNum > 0) return asNum;
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return undefined;
+}
+
+export function composerFromRows(
+  composerId: string,
+  header: Record<string, unknown>,
+  bubbles: Array<Record<string, unknown>>
+): CursorComposer {
+  const model =
+    (header.modelConfig && typeof header.modelConfig === "object"
+      ? String((header.modelConfig as { modelName?: string }).modelName ?? "")
+      : "") ||
+    (typeof header.name === "string" ? header.name : "") ||
+    undefined;
+  const user =
+    bubbles.find((b) => b.type === 1 && bubbleText(b).trim().length > 0) ??
+    bubbles.find((b) => matchHopId(bubbleText(b)));
+  const thinking = bubbles.map(thinkingOf).filter((text) => text.length > 0);
+  const visible = bubbles
+    .filter((b) => b.type === 2 && typeof b.text === "string" && b.text.trim().length > 0)
+    .map((b) => String(b.text).trim());
+  const assistantText = [...thinking, ...visible].join("\n\n");
+  const turns = bubbles
+    .map((b) => (typeof b.turnDurationMs === "number" ? b.turnDurationMs : Number(b.turnDurationMs)))
+    .filter((ms) => Number.isFinite(ms) && ms > 0);
+  const firstAssistant = bubbles.find((b) => b.type === 2);
+  return {
+    composerId,
+    createdAt: parseMs(header.createdAt) ?? parseMs(header.created_at),
+    lastUpdatedAt:
+      parseMs(header.lastUpdatedAt) ?? parseMs(header.updatedAt) ?? parseMs(header.lastUpdatedAtMs),
+    status: typeof header.status === "string" ? header.status : undefined,
+    model: model || undefined,
+    userText: [String(user ? bubbleText(user) : ""), typeof header.name === "string" ? header.name : ""].join("\n"),
+    assistantText,
+    userCreatedAt: parseMs(user?.createdAt) ?? parseMs(user?.timestamp),
+    assistantCreatedAt: parseMs(firstAssistant?.createdAt) ?? parseMs(firstAssistant?.timestamp),
+    turnDurationMs: turns.length ? Math.max(...turns) : undefined
+  };
+}

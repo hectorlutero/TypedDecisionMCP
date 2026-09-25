@@ -7,13 +7,13 @@ describe("goldHits", () => {
       {
         id: "t",
         split: "authored",
-        preset: "comando",
+        preset: "command",
         state: {},
-        gold: { comando: "yes", subagente: "explore" }
+        gold: { command: "yes", subagent: "explore" }
       },
       {
-        comando: { type: "yesno", yes: 0.8 },
-        subagente: {
+        command: { type: "yesno", yes: 0.8 },
+        subagent: {
           type: "choice",
           choice: "explore",
           probabilities: { explore: 0.7, generalPurpose: 0.3 },

@@ -1,4 +1,4 @@
-import { renderState, type Question } from "../contract.js";
+import { renderState, type Question, type Questions } from "../contract.js";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -11,8 +11,8 @@ export type OptionSpec = {
 export function optionSpecs(question: Question): OptionSpec[] {
   if (question.type === "yesno") {
     return [
-      { key: "yes", label: "yes", description: "yes" },
-      { key: "no", label: "no", description: "no" }
+      { key: "yes", label: "A", description: question.options?.yes ?? "yes" },
+      { key: "no", label: "B", description: question.options?.no ?? "no" }
     ];
   }
   if (question.type === "choice") {
@@ -24,25 +24,63 @@ export function optionSpecs(question: Question): OptionSpec[] {
   }
   return question.criteria.map((description, i) => ({
     key: String(i),
-    label: String(i),
+    label: LETTERS[i] ?? String(i),
     description
   }));
 }
 
-export function buildPrompt(stateText: string, question: Question, options: OptionSpec[]): string {
+export function promptPrefix(stateText: string, fewShot = ""): string {
+  const example = fewShot.trim() ? [fewShot.trim(), ""] : [];
+  return ["Classify the state. Reply with exactly one option label.", "", ...example, "State:", stateText, "", ""].join(
+    "\n"
+  );
+}
+
+export function promptSuffix(question: Question, options: OptionSpec[]): string {
   const lines = options.map((opt) => `${opt.label} - ${opt.description}`);
-  return [
-    "State:",
-    stateText,
-    "",
-    "Question:",
-    question.instructions,
-    "",
-    "Options (answer with exactly one label token):",
-    ...lines,
-    "",
-    "Answer:"
-  ].join("\n");
+  return ["Question:", question.instructions, "", "Options:", ...lines].join("\n");
+}
+
+export function buildPrompt(stateText: string, question: Question, options: OptionSpec[]): string {
+  return promptPrefix(stateText) + promptSuffix(question, options);
+}
+
+const WRAP_HEAD = [
+  "<|im_start|>system",
+  "You are a classifier. Reply with exactly one option label token. No punctuation. No explanation.",
+  "<|im_end|>",
+  "<|im_start|>user",
+  ""
+].join("\n");
+
+const WRAP_TAIL = ["", "/no_think", "<|im_end|>", "<|im_start|>assistant", "<think>", "", "</think>", ""].join("\n");
+
+export function wrapPrefix(prefixBody: string): string {
+  return WRAP_HEAD + prefixBody;
+}
+
+export function wrapSuffix(suffixBody: string): string {
+  return suffixBody + WRAP_TAIL;
+}
+
+/** Qwen3 chat envelope with an empty think block so the next token is the label. */
+export function wrapForModel(body: string): string {
+  return wrapPrefix(body) + wrapSuffix("");
+}
+
+export type CompiledHops = {
+  prefix: string;
+  items: Record<string, { suffix: string; full: string }>;
+};
+
+export function compileHops(stateText: string, questions: Questions, fewShot = ""): CompiledHops {
+  const prefix = wrapPrefix(promptPrefix(stateText, fewShot));
+  const items: CompiledHops["items"] = {};
+  for (const [id, question] of Object.entries(questions)) {
+    const suffix = wrapSuffix(promptSuffix(question, optionSpecs(question)));
+    items[id] = { suffix, full: prefix + suffix };
+  }
+  return { prefix, items };
 }
 
 export function statePrefix(state: unknown): string {

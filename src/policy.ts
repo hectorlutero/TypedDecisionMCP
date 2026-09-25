@@ -1,6 +1,7 @@
 import type { Action, Answer, Answers } from "./contract.js";
+import { envFirst } from "./env.js";
 
-const RISK_IF_YES_IDS = new Set(["comando"]);
+const RISK_IF_YES_IDS = new Set(["command"]);
 
 export type PolicyThresholds = {
   auto: number;
@@ -8,10 +9,10 @@ export type PolicyThresholds = {
 };
 
 export function loadThresholds(env: NodeJS.ProcessEnv = process.env): PolicyThresholds {
-  const auto = Number(env.DECIDIR_AUTO ?? 0.8);
-  const review = Number(env.DECIDIR_REVIEW ?? 0.5);
+  const auto = Number(envFirst(env, "DECIDE_AUTO", "DECIDIR_AUTO") ?? 0.8);
+  const review = Number(envFirst(env, "DECIDE_REVIEW", "DECIDIR_REVIEW") ?? 0.5);
   if (!(auto > review) || !(review > 0) || !(auto <= 1)) {
-    throw new Error("DECIDIR_AUTO must be > DECIDIR_REVIEW, both in (0, 1]");
+    throw new Error("DECIDE_AUTO must be > DECIDE_REVIEW, both in (0, 1]");
   }
   return { auto, review };
 }

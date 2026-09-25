@@ -1,0 +1,46 @@
+{
+  "method": "cursor-ui",
+  "model": "COLA_O_NOME_DO_MODELO_DA_UI",
+  "rows": [
+    {
+      "id": "cmd-01",
+      "samples": [
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" }
+      ]
+    },
+    {
+      "id": "sub-01",
+      "samples": [
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" }
+      ]
+    },
+    {
+      "id": "diff-02",
+      "samples": [
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" }
+      ]
+    },
+    {
+      "id": "file-01",
+      "samples": [
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" }
+      ]
+    },
+    {
+      "id": "commit-01",
+      "samples": [
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" },
+        { "latency_ms": 0, "text": "" }
+      ]
+    }
+  ]
+}

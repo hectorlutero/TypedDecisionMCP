@@ -3,18 +3,22 @@ import { getLlama, type Llama, type LlamaContext, type LlamaContextSequence, typ
 import {
   confidenceFromDistribution,
   DecideError,
-  normalizeProbabilities,
   renderState,
   type Answer,
   type Answers,
+  type Question,
   type Questions,
   type State
 } from "../contract.js";
-import { defaultModelPath, MODEL_ID } from "../model-path.js";
-import { buildPrompt, optionSpecs, type OptionSpec } from "./prompt.js";
+import { modelId, resolveModelPath } from "../model-path.js";
+import { divideByPrior, optionMass, priorCacheKey } from "./calibrate.js";
+import { buildPrompt, compileHops, optionSpecs, wrapForModel, type OptionSpec } from "./prompt.js";
 import { optionTokenIds } from "./tokenize.js";
+import { envFirst, fewShotEnabled } from "../env.js";
+import { formatFewShot, PACKS } from "../packs/cursor.js";
 
 export type ScoreResult = {
+  engine: "logits" | "head-mlp";
   answers: Answers;
   model: string;
   usage: { prompt_tokens: number; generated_tokens: 0 };
@@ -49,15 +53,33 @@ function asProbList(raw: unknown): Array<{ token: number; probability: number }>
   return [];
 }
 
+function calibrateEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return envFirst(env, "DECIDE_CALIBRATE", "DECIDIR_CALIBRATE") !== "0";
+}
+
+/** `DECIDE_GPU=0|cpu|false` forces CPU (needed when Vulkan OOMs on small laptop GPUs). */
+export function resolveGpuOption(env: NodeJS.ProcessEnv = process.env): "auto" | false | "cuda" | "vulkan" | "metal" {
+  const raw = (envFirst(env, "DECIDE_GPU", "DECIDIR_GPU") ?? "auto").toLowerCase();
+  if (raw === "0" || raw === "false" || raw === "cpu" || raw === "off") return false;
+  if (raw === "cuda" || raw === "vulkan" || raw === "metal") return raw;
+  return "auto";
+}
+
 export class LogitEngine implements DecisionEngine {
   private llama: Llama | undefined;
   private model: LlamaModel | undefined;
   private context: LlamaContext | undefined;
   private sequence: LlamaContextSequence | undefined;
   private readonly modelPath: string;
+  private readonly priors = new Map<string, Record<string, number>>();
+  private warm = false;
 
-  constructor(modelPath = defaultModelPath()) {
+  constructor(modelPath = resolveModelPath()) {
     this.modelPath = modelPath;
+  }
+
+  isWarm(): boolean {
+    return this.warm;
   }
 
   async init(): Promise<void> {
@@ -69,18 +91,36 @@ export class LogitEngine implements DecisionEngine {
         503
       );
     }
-    this.llama = await getLlama();
+    this.llama = await getLlama({ gpu: resolveGpuOption() });
     this.model = await this.llama.loadModel({ modelPath: this.modelPath });
-    this.context = await this.model.createContext({ contextSize: 2048 });
+    this.context = await this.model.createContext({ contextSize: 512 });
     this.sequence = this.context.getSequence();
     await this.warmup();
+    await this.warmPriors();
+    this.warm = true;
   }
 
   private async warmup(): Promise<void> {
     const seq = this.requireSequence();
-    const tokens = this.requireModel().tokenize("warmup\nAnswer:");
+    const tokens = this.tokenizePrompt("warmup\n");
     await seq.evaluateWithoutGeneratingNewTokens(tokens);
     seq.clearHistory();
+  }
+
+  private async warmPriors(): Promise<void> {
+    const model = this.requireModel();
+    const questions: Question[] = [PACKS.command.command, PACKS.commit.commit];
+    if (PACKS.diff.diff.type === "yesno") questions.push(PACKS.diff.diff);
+    for (const question of questions) {
+      const options = optionSpecs(question);
+      const tokensByKey = Object.fromEntries(
+        options.map((opt) => [
+          opt.key,
+          optionTokenIds({ tokenize: (text) => model.tokenize(text) as number[] }, opt.label)
+        ])
+      );
+      await this.priorFor(question, options, tokensByKey);
+    }
   }
 
   async score(state: State, questions: Questions): Promise<ScoreResult> {
@@ -89,10 +129,22 @@ export class LogitEngine implements DecisionEngine {
     const model = this.requireModel();
     const seq = this.requireSequence();
     const stateText = renderState(state);
+    const fewShot = fewShotEnabled() ? formatFewShot(Object.keys(questions)) : "";
+    const compiled = compileHops(stateText, questions, fewShot);
     const answers: Answers = {};
     let promptTokens = 0;
 
-    for (const [id, question] of Object.entries(questions)) {
+    const trace = envFirst(process.env, "DECIDE_TRACE", "DECIDIR_TRACE") === "1";
+    const questionIds = Object.entries(questions);
+    const kvOn = envFirst(process.env, "DECIDE_KV", "DECIDIR_KV") !== "0";
+    if (questionIds.length > 1 && kvOn) {
+      const prefixTokens = this.tokenizePrompt(compiled.prefix);
+      await seq.clearHistory();
+      await seq.evaluateWithoutGeneratingNewTokens(prefixTokens);
+    }
+
+    for (const [id, question] of questionIds) {
+      const t0 = performance.now();
       const options = optionSpecs(question);
       const tokensByKey = Object.fromEntries(
         options.map((opt) => [
@@ -100,31 +152,97 @@ export class LogitEngine implements DecisionEngine {
           optionTokenIds({ tokenize: (text) => model.tokenize(text) as number[] }, opt.label)
         ])
       );
-      const prompt = buildPrompt(stateText, question, options);
-      const tokens = model.tokenize(prompt);
+      const prompt = compiled.items[id]?.full ?? wrapForModel(buildPrompt(stateText, question, options));
+      const tokens = this.tokenizePrompt(prompt);
+      const tTokenize = performance.now();
       promptTokens += tokens.length;
 
-      seq.clearHistory();
-      const probs = await this.nextTokenProbs(tokens);
-      answers[id] = toAnswer(question.type, options, tokensByKey, probs);
+      const { probs, prefix_reuse } = await this.nextTokenProbs(tokens);
+      const tProbs = performance.now();
+      const actual = optionMass(options.map((opt) => opt.key), tokensByKey, (token) => probs.get(token)?.probability ?? 0);
+      const shouldCalibrate = calibrateEnabled() && question.type !== "choice";
+      const priorKey = shouldCalibrate
+        ? priorCacheKey(
+            question.instructions,
+            options.map((opt) => ({ key: opt.key, label: opt.label }))
+          )
+        : "";
+      const priorCached = shouldCalibrate && this.priors.has(priorKey);
+      const prior = shouldCalibrate
+        ? await this.priorFor(question, options, tokensByKey)
+        : Object.fromEntries(options.map((opt) => [opt.key, 1]));
+      const tPrior = performance.now();
+      if (trace) {
+        console.error(
+          JSON.stringify({
+            id,
+            tokenize_ms: tTokenize - t0,
+            nextTokenProbs_ms: tProbs - tTokenize,
+            prior_ms: tPrior - tProbs,
+            prior_cached: priorCached,
+            prefix_reuse,
+            prompt_tokens: tokens.length
+          })
+        );
+      }
+      answers[id] = toAnswer(question.type, options, divideByPrior(actual, prior));
     }
 
     return {
+      engine: "logits",
       answers,
-      model: MODEL_ID,
+      model: modelId(),
       usage: { prompt_tokens: promptTokens, generated_tokens: 0 },
       latency_ms: performance.now() - started
     };
   }
 
-  private async nextTokenProbs(tokens: number[]): Promise<ProbMap> {
+  private tokenizePrompt(prompt: string) {
+    return this.requireModel().tokenize(prompt, true);
+  }
+
+  private async priorFor(
+    question: Question,
+    options: OptionSpec[],
+    tokensByKey: Record<string, number[]>
+  ): Promise<Record<string, number>> {
+    const key = priorCacheKey(
+      question.instructions,
+      options.map((opt) => ({ key: opt.key, label: opt.label }))
+    );
+    const cached = this.priors.get(key);
+    if (cached) return cached;
+
+    const prompt = wrapForModel(buildPrompt("(empty)", question, options));
+    const tokens = this.tokenizePrompt(prompt);
+    const { probs } = await this.nextTokenProbs(tokens);
+    const prior = optionMass(options.map((opt) => opt.key), tokensByKey, (token) => probs.get(token)?.probability ?? 0);
+    this.priors.set(key, prior);
+    return prior;
+  }
+
+  /**
+   * Reuse KV for the longest matching prompt prefix (Qwen envelope, and State when unchanged).
+   * Falls back to a full eval when nothing overlaps (`adaptStateToTokens` + empty suffix).
+   * Set `DECIDE_KV=0` to force clearHistory every hop (ablation / debug).
+   */
+  private async nextTokenProbs(tokens: number[]): Promise<{ probs: ProbMap; prefix_reuse: number }> {
     const seq = this.requireSequence();
     if (tokens.length === 0) {
       throw new DecideError("invalid_request", "empty prompt");
     }
-    const input = tokens.map((token, i) =>
-      i === tokens.length - 1 ? ([token, { generateNext: { probabilities: true } }] as const) : token
-    );
+    const last = tokens[tokens.length - 1]!;
+    const prefix = tokens.slice(0, -1);
+    let prefix_reuse = 0;
+    let suffix = prefix;
+    if (envFirst(process.env, "DECIDE_KV", "DECIDIR_KV") === "0") {
+      await seq.clearHistory();
+    } else {
+      await seq.adaptStateToTokens(prefix as never, false);
+      prefix_reuse = seq.nextTokenIndex;
+      suffix = prefix.slice(prefix_reuse);
+    }
+    const input = [...suffix, [last, { generateNext: { probabilities: true } }] as const];
     let found: ProbMap | undefined;
     await seq.controlledEvaluate(input as never, {
       onTokenResult: (_index: number, result: { next?: { probabilities?: unknown } }) => {
@@ -135,10 +253,12 @@ export class LogitEngine implements DecisionEngine {
     if (!found) {
       throw new DecideError("engine_error", "controlledEvaluate returned no probabilities", 500);
     }
-    return found;
+    return { probs: found, prefix_reuse };
   }
 
   async dispose(): Promise<void> {
+    this.warm = false;
+    this.priors.clear();
     this.sequence = undefined;
     await this.context?.dispose();
     this.context = undefined;
@@ -159,20 +279,11 @@ export class LogitEngine implements DecisionEngine {
   }
 }
 
-function toAnswer(
+export function toAnswer(
   type: "yesno" | "choice" | "score",
   options: OptionSpec[],
-  tokensByKey: Record<string, number[]>,
-  probs: ProbMap
+  normalized: Record<string, number>
 ): Answer {
-  const raw: Record<string, number> = {};
-  for (const opt of options) {
-    raw[opt.key] = (tokensByKey[opt.key] ?? []).reduce(
-      (sum, token) => sum + (probs.get(token)?.probability ?? 0),
-      0
-    );
-  }
-  const normalized = normalizeProbabilities(raw);
   if (type === "yesno") {
     return { type: "yesno", yes: normalized.yes ?? 0 };
   }
@@ -207,4 +318,8 @@ export async function getLogitEngine(): Promise<LogitEngine> {
     await singleton.init();
   }
   return singleton;
+}
+
+export function isEngineWarm(): boolean {
+  return singleton?.isWarm() ?? false;
 }
