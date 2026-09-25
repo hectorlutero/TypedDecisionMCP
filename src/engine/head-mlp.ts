@@ -3,16 +3,15 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { getLlama, type Llama, type LlamaEmbeddingContext, type LlamaModel } from "node-llama-cpp";
 import { DecideError, isRecord, renderState, type Answers, type Question, type Questions, type State } from "../contract.js";
-import { envFirst, fewShotEnabled } from "../env.js";
+import { envFirst } from "../env.js";
 import { modelId, resolveModelPath } from "../model-path.js";
-import { formatFewShot } from "../packs/cursor.js";
 import {
   resolveGpuOption,
   toAnswer,
   type DecisionEngine,
   type ScoreResult
 } from "./logits.js";
-import { buildPrompt, compileHops, optionSpecs, wrapForModel, type OptionSpec } from "./prompt.js";
+import { buildPrompt, optionSpecs, type OptionSpec } from "./prompt.js";
 
 export type ProbeHead = {
   classes: string[];
@@ -27,6 +26,13 @@ export type HeadMlpArtifact = {
 };
 
 const DEFAULT_EMBED_CACHE = 128;
+/** Short hop text fits well under 256; smaller context cuts embed cost. */
+const EMBED_CONTEXT_SIZE = 256;
+
+/** Same ruler as bench `chars/4` — avoid tokenizing the unused chat wrap on the hot path. */
+export function countEmbedTokens(text: string): number {
+  return Math.max(1, Math.ceil(text.length / 4));
+}
 
 /** LRU cache for embedding vectors keyed by the exact embed string. */
 export class EmbeddingCache {
@@ -194,7 +200,7 @@ export class HeadMlpEngine implements DecisionEngine {
     }
     this.llama = await getLlama({ gpu: resolveGpuOption() });
     this.model = await this.llama.loadModel({ modelPath: this.modelPath });
-    this.embedding = await this.model.createEmbeddingContext({ contextSize: 512 });
+    this.embedding = await this.model.createEmbeddingContext({ contextSize: EMBED_CONTEXT_SIZE });
   }
 
   async score(state: State, questions: Questions): Promise<ScoreResult> {
@@ -202,13 +208,10 @@ export class HeadMlpEngine implements DecisionEngine {
     const started = performance.now();
     const artifact = this.artifact;
     const embedding = this.embedding;
-    const model = this.model;
-    if (!artifact || !embedding || !model) {
+    if (!artifact || !embedding) {
       throw new DecideError("engine_error", "head-mlp engine not loaded", 500);
     }
     const stateText = renderState(state);
-    const fewShot = fewShotEnabled() ? formatFewShot(Object.keys(questions)) : "";
-    const compiled = compileHops(stateText, questions, fewShot);
     const answers: Answers = {};
     let promptTokens = 0;
 
@@ -219,8 +222,7 @@ export class HeadMlpEngine implements DecisionEngine {
       }
       const options = optionSpecs(question);
       const embedText = embeddingInput(stateText, question);
-      const prompt = compiled.items[id]?.full ?? wrapForModel(buildPrompt(stateText, question, options));
-      promptTokens += model.tokenize(prompt, true).length;
+      promptTokens += countEmbedTokens(embedText);
       const vector = await this.cache.get(embedText, async (text) => (await embedding.getEmbeddingFor(text)).vector);
       if (vector.length !== artifact.dim) {
         throw new DecideError("engine_error", `embedding dim ${vector.length} != ${artifact.dim}`, 500);
