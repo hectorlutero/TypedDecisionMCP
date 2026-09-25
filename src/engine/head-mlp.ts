@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { getLlama, type Llama, type LlamaEmbeddingContext, type LlamaModel } from "node-llama-cpp";
-import { DecideError, isRecord, renderState, type Answers, type Questions, type State } from "../contract.js";
+import { DecideError, isRecord, renderState, type Answers, type Question, type Questions, type State } from "../contract.js";
 import { envFirst, fewShotEnabled } from "../env.js";
 import { modelId, resolveModelPath } from "../model-path.js";
 import { formatFewShot } from "../packs/cursor.js";
@@ -25,6 +25,47 @@ export type HeadMlpArtifact = {
   dim: number;
   heads: Record<string, ProbeHead>;
 };
+
+const DEFAULT_EMBED_CACHE = 128;
+
+/** LRU cache for embedding vectors keyed by the exact embed string. */
+export class EmbeddingCache {
+  private readonly max: number;
+  private readonly map = new Map<string, readonly number[]>();
+
+  constructor(max = DEFAULT_EMBED_CACHE) {
+    this.max = Math.max(1, max);
+  }
+
+  get size(): number {
+    return this.map.size;
+  }
+
+  clear(): void {
+    this.map.clear();
+  }
+
+  async get(key: string, fetch: (key: string) => Promise<readonly number[]>): Promise<readonly number[]> {
+    const cached = this.map.get(key);
+    if (cached) {
+      this.map.delete(key);
+      this.map.set(key, cached);
+      return cached;
+    }
+    const vector = await fetch(key);
+    this.map.set(key, vector);
+    if (this.map.size > this.max) {
+      const oldest = this.map.keys().next().value;
+      if (oldest !== undefined) this.map.delete(oldest);
+    }
+    return vector;
+  }
+}
+
+/** Same hop text for train and inference — no Qwen chat envelope. */
+export function embeddingInput(stateText: string, question: Question): string {
+  return buildPrompt(stateText, question, optionSpecs(question));
+}
 
 export function l2Normalize(vector: readonly number[]): number[] {
   const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
@@ -132,6 +173,7 @@ export class HeadMlpEngine implements DecisionEngine {
   private model: LlamaModel | undefined;
   private embedding: LlamaEmbeddingContext | undefined;
   private artifact: HeadMlpArtifact | undefined;
+  private readonly cache = new EmbeddingCache();
   private readonly weightsPath: string;
   private readonly modelPath: string;
 
@@ -175,14 +217,14 @@ export class HeadMlpEngine implements DecisionEngine {
       if (!head) {
         throw new DecideError("invalid_request", `head-mlp has no probe for question ${id}`, 500);
       }
-      const prompt = compiled.items[id]?.full ?? wrapForModel(buildPrompt(stateText, question, optionSpecs(question)));
-      const tokens = model.tokenize(prompt, true);
-      promptTokens += tokens.length;
-      const vector = (await embedding.getEmbeddingFor(prompt)).vector;
+      const options = optionSpecs(question);
+      const embedText = embeddingInput(stateText, question);
+      const prompt = compiled.items[id]?.full ?? wrapForModel(buildPrompt(stateText, question, options));
+      promptTokens += model.tokenize(prompt, true).length;
+      const vector = await this.cache.get(embedText, async (text) => (await embedding.getEmbeddingFor(text)).vector);
       if (vector.length !== artifact.dim) {
         throw new DecideError("engine_error", `embedding dim ${vector.length} != ${artifact.dim}`, 500);
       }
-      const options = optionSpecs(question);
       const predicted = predictClass(vector, head, options.length);
       const probabilities = remapProbabilities(options, head, predicted.probabilities);
       answers[id] = toAnswer(question.type, options, probabilities);
@@ -198,6 +240,7 @@ export class HeadMlpEngine implements DecisionEngine {
   }
 
   async dispose(): Promise<void> {
+    this.cache.clear();
     this.artifact = undefined;
     await this.embedding?.dispose();
     this.embedding = undefined;
