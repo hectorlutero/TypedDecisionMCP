@@ -4,9 +4,9 @@ import { join } from "node:path";
 import { getLlama } from "node-llama-cpp";
 import { loadFixtures, type Fixture } from "../bench/load-fixtures.js";
 import { type State } from "../src/contract.js";
-import { defaultHeadMlpPath, type HeadMlpArtifact, type ProbeHead } from "../src/engine/head-mlp.js";
+import { defaultHeadMlpPath, embeddingInput, type HeadMlpArtifact, type ProbeHead } from "../src/engine/head-mlp.js";
 import { resolveGpuOption } from "../src/engine/logits.js";
-import { compileHops, optionSpecs } from "../src/engine/prompt.js";
+import { optionSpecs } from "../src/engine/prompt.js";
 import { modelId, resolveModelPath } from "../src/model-path.js";
 import { resolvePack } from "../src/packs/cursor.js";
 import { fitSoftmax } from "./fit.js";
@@ -27,13 +27,11 @@ type Row = {
 
 function rowsForFixture(fixture: Fixture, variant: number): Row[] {
   const pack = resolvePack(fixture.state as State, fixture.preset, undefined);
-  const compiled = compileHops(pack.view, pack.questions, "");
   return Object.entries(fixture.gold).flatMap(([questionId, gold]) => {
     const question = pack.questions[questionId];
     if (!question) return [];
     const options = optionSpecs(question);
-    const text = compiled.items[questionId]?.full;
-    if (!text) return [];
+    const text = embeddingInput(pack.view, question);
     const fileMode = questionId === "file";
     const classes = fileMode
       ? Array.from({ length: FILE_CLASS_COUNT }, (_, i) => String(i))

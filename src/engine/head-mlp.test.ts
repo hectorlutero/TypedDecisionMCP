@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DecideError } from "../contract.js";
-import { loadHeadWeights, predictClass, HeadMlpEngine } from "./head-mlp.js";
+import {
+  EmbeddingCache,
+  HeadMlpEngine,
+  embeddingInput,
+  loadHeadWeights,
+  predictClass
+} from "./head-mlp.js";
 
 describe("head-mlp probe", () => {
   it("picks the class whose weight aligns with the vector", () => {
@@ -15,6 +21,39 @@ describe("head-mlp probe", () => {
     expect(predicted.key).toBe("yes");
     expect((predicted.probabilities.yes ?? 0) + (predicted.probabilities.no ?? 0)).toBeCloseTo(1);
     expect(predicted.probabilities.yes ?? 0).toBeGreaterThan(predicted.probabilities.no ?? 0);
+  });
+});
+
+describe("EmbeddingCache", () => {
+  it("reuses a vector for the same key and evicts the oldest", async () => {
+    let calls = 0;
+    const cache = new EmbeddingCache(2);
+    const fetch = async (key: string) => {
+      calls += 1;
+      return [key.length] as const;
+    };
+    expect(await cache.get("a", fetch)).toEqual([1]);
+    expect(await cache.get("a", fetch)).toEqual([1]);
+    expect(calls).toBe(1);
+    expect(await cache.get("b", fetch)).toEqual([1]);
+    expect(await cache.get("c", fetch)).toEqual([1]);
+    expect(calls).toBe(3);
+    expect(await cache.get("a", fetch)).toEqual([1]);
+    expect(calls).toBe(4);
+  });
+});
+
+describe("embeddingInput", () => {
+  it("embeds state and question without the chat envelope", () => {
+    const text = embeddingInput('{"command":"ls"}', {
+      type: "yesno",
+      instructions: "Is this destructive?"
+    });
+    expect(text).toContain("State:");
+    expect(text).toContain("Is this destructive?");
+    expect(text).toContain("A - yes");
+    expect(text).not.toContain("<|im_start|>");
+    expect(text).not.toContain("/no_think");
   });
 });
 
