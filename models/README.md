@@ -21,4 +21,4 @@ Env útil nesta máquina:
 - `DECIDE_GPU=0|cpu` — força CPU (necessário se Vulkan OOM em tiers maiores; no 0.6B preferir `auto`)
 - `DECIDE_KV=0` — desliga reuse KV (ablation; piora qualidade/latência)
 - `DECIDE_FEWSHOT=1` — option few-shot no prefixo (opt-in; no 0.6B quality cai abaixo de 0,75)
-- `DECIDE_ENGINE=head-mlp` — segundo motor (embedding curto + probe + LRU). Default continua `logits` até o gate. Pesos em `$DECIDE_HEAD_MLP` ou `~/.cache/TypedDecisionMCP/head-mlp.json`
+- `DECIDE_ENGINE=head-mlp` — segundo motor (embedding curto + probe + LRU; hot path sem wrap). Default continua `logits`. Pesos em `$DECIDE_HEAD_MLP` ou `~/.cache/TypedDecisionMCP/head-mlp.json`

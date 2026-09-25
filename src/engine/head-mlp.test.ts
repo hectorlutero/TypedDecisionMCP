@@ -3,6 +3,7 @@ import { DecideError } from "../contract.js";
 import {
   EmbeddingCache,
   HeadMlpEngine,
+  countEmbedTokens,
   embeddingInput,
   loadHeadWeights,
   predictClass
@@ -54,6 +55,11 @@ describe("embeddingInput", () => {
     expect(text).toContain("A - yes");
     expect(text).not.toContain("<|im_start|>");
     expect(text).not.toContain("/no_think");
+  });
+
+  it("counts embed prompt tokens with the chars/4 ruler", () => {
+    expect(countEmbedTokens("abcd")).toBe(1);
+    expect(countEmbedTokens("a".repeat(8))).toBe(2);
   });
 });
 
