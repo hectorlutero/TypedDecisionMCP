@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { envFirst } from "./env.js";
 
 export type ModelTier = "0.6B" | "1.7B" | "4B";
@@ -54,6 +54,15 @@ export const MODEL_SHA256 = MODEL_CATALOG["0.6B"].sha256;
 export const MODEL_ID = `${MODEL_CATALOG["0.6B"].repo}/${MODEL_CATALOG["0.6B"].file}`;
 
 export function modelId(env: NodeJS.ProcessEnv = process.env): string {
+  const override = envFirst(env, "DECIDE_MODEL_ID", "DECIDIR_MODEL_ID");
+  if (override) return override;
+  const model = envFirst(env, "DECIDE_MODEL", "DECIDIR_MODEL");
+  if (model) {
+    const base = basename(model);
+    if (base.startsWith("all-MiniLM-L6-v2")) {
+      return `second-state/All-MiniLM-L6-v2-Embedding-GGUF/${base}`;
+    }
+  }
   const spec = activeSpec(env);
   return `${spec.repo}/${spec.file}`;
 }

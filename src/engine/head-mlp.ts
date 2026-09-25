@@ -5,6 +5,7 @@ import { getLlama, type Llama, type LlamaEmbeddingContext, type LlamaModel } fro
 import { DecideError, isRecord, renderState, type Answers, type Question, type Questions, type State } from "../contract.js";
 import { envFirst } from "../env.js";
 import { modelId, resolveModelPath } from "../model-path.js";
+import { roleForPath } from "../packs/cursor.js";
 import {
   resolveGpuOption,
   toAnswer,
@@ -19,11 +20,34 @@ export type ProbeHead = {
   bias: number[];
 };
 
+export type FileScoring = "slot" | "pair";
+
 export type HeadMlpArtifact = {
   modelId: string;
   dim: number;
   heads: Record<string, ProbeHead>;
+  /** Per-question divisor applied to probe logits before the softmax. */
+  temperature?: Record<string, number>;
+  /** `pair` scores each file path on its own. Absent means the slot head. */
+  fileScoring?: FileScoring;
 };
+
+/** One path at a time, so the candidate index is not part of the text. */
+export function filePairInput(request: string, path: string): string {
+  return ["Is this path the right place for the request?", "", "Request:", request, "", "Path:", path, "", "Role:", roleForPath(path)].join(
+    "\n"
+  );
+}
+
+export function requestFromFileView(stateText: string): string {
+  try {
+    const parsed = JSON.parse(stateText) as unknown;
+    if (isRecord(parsed) && typeof parsed.request === "string") return parsed.request;
+  } catch {
+    return "";
+  }
+  return "";
+}
 
 const DEFAULT_EMBED_CACHE = 128;
 /** Short hop text fits well under 256; smaller context cuts embed cost. */
@@ -51,6 +75,19 @@ export class EmbeddingCache {
     this.map.clear();
   }
 
+  has(key: string): boolean {
+    return this.map.has(key);
+  }
+
+  put(key: string, vector: readonly number[]): void {
+    if (this.map.has(key)) this.map.delete(key);
+    this.map.set(key, vector);
+    if (this.map.size > this.max) {
+      const oldest = this.map.keys().next().value;
+      if (oldest !== undefined) this.map.delete(oldest);
+    }
+  }
+
   async get(key: string, fetch: (key: string) => Promise<readonly number[]>): Promise<readonly number[]> {
     const cached = this.map.get(key);
     if (cached) {
@@ -59,13 +96,49 @@ export class EmbeddingCache {
       return cached;
     }
     const vector = await fetch(key);
-    this.map.set(key, vector);
-    if (this.map.size > this.max) {
-      const oldest = this.map.keys().next().value;
-      if (oldest !== undefined) this.map.delete(oldest);
-    }
+    this.put(key, vector);
     return vector;
   }
+}
+
+/** Private surface of LlamaEmbeddingContext used for file-pair prefix KV reuse. */
+type EmbeddingInternals = {
+  _sequence: {
+    nextTokenIndex: number;
+    adaptStateToTokens: (tokens: number[], allowShift?: boolean) => Promise<void>;
+    evaluateWithoutGeneratingNewTokens: (tokens: number[]) => Promise<void>;
+    clearHistory: () => Promise<void>;
+  };
+  _llamaContext: {
+    model: { tokenizer: (text: string, special: boolean) => number[] };
+    _ctx: { getEmbedding: (n: number) => ArrayLike<number> };
+  };
+  _prepareInput: (tokens: number[]) => void;
+};
+
+function asEmbeddingInternals(embedding: LlamaEmbeddingContext): EmbeddingInternals {
+  return embedding as unknown as EmbeddingInternals;
+}
+
+/** Tokenize like getEmbeddingFor (BOS/EOS via _prepareInput). */
+export function embeddingTokensFor(embedding: LlamaEmbeddingContext, text: string): number[] {
+  const emb = asEmbeddingInternals(embedding);
+  const tokens = emb._llamaContext.model.tokenizer(text, false).slice();
+  emb._prepareInput(tokens);
+  return tokens;
+}
+
+/**
+ * Prefill with adaptStateToTokens so shared prefixes across file-pair paths keep KV.
+ * Numeric match to erase-total getEmbeddingFor was verified in bench/day2-prefix-kv.ts.
+ */
+export async function embedWithPrefixReuse(embedding: LlamaEmbeddingContext, text: string): Promise<number[]> {
+  const emb = asEmbeddingInternals(embedding);
+  const tokens = embeddingTokensFor(embedding, text);
+  await emb._sequence.adaptStateToTokens(tokens, false);
+  const suffix = tokens.slice(emb._sequence.nextTokenIndex);
+  if (suffix.length > 0) await emb._sequence.evaluateWithoutGeneratingNewTokens(suffix);
+  return Array.from(emb._llamaContext._ctx.getEmbedding(tokens.length));
 }
 
 /** Same hop text for train and inference — no Qwen chat envelope. */
@@ -100,10 +173,14 @@ export function linearScores(vector: readonly number[], head: ProbeHead): number
 export function predictClass(
   vector: readonly number[],
   head: ProbeHead,
-  classCount = head.classes.length
+  classCount = head.classes.length,
+  temperature = 1
 ): { key: string; probabilities: Record<string, number> } {
   const n = Math.min(classCount, head.classes.length);
-  const scores = linearScores(vector, head).slice(0, n);
+  const scale = temperature > 0 ? temperature : 1;
+  const scores = linearScores(vector, head)
+    .slice(0, n)
+    .map((score) => score / scale);
   const probs = softmax(scores);
   const probabilities = Object.fromEntries(head.classes.slice(0, n).map((key, i) => [key, probs[i] ?? 0]));
   const winner = head.classes.slice(0, n).reduce((best, key) =>
@@ -154,7 +231,22 @@ export function loadHeadWeights(raw: unknown, expectedModelId: string): HeadMlpA
   if (Object.keys(heads).length === 0) {
     throw new DecideError("invalid_request", "head-mlp weights have no heads", 500);
   }
-  return { modelId, dim, heads };
+  const temperature = readTemperature(raw.temperature);
+  const fileScoring: FileScoring = raw.fileScoring === "pair" ? "pair" : "slot";
+  return { modelId, dim, heads, temperature, fileScoring };
+}
+
+function readTemperature(value: unknown): Record<string, number> | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) throw new DecideError("invalid_request", "head-mlp temperature must be an object", 500);
+  const temperature: Record<string, number> = {};
+  for (const [id, entry] of Object.entries(value)) {
+    if (typeof entry !== "number" || !Number.isFinite(entry) || entry <= 0) {
+      throw new DecideError("invalid_request", `head-mlp temperature for ${id} must be a positive number`, 500);
+    }
+    temperature[id] = entry;
+  }
+  return temperature;
 }
 
 function remapProbabilities(
@@ -221,13 +313,20 @@ export class HeadMlpEngine implements DecisionEngine {
         throw new DecideError("invalid_request", `head-mlp has no probe for question ${id}`, 500);
       }
       const options = optionSpecs(question);
+      const temperature = artifact.temperature?.[id] ?? 1;
+      if (id === "file" && artifact.fileScoring === "pair") {
+        const paired = await this.scoreFilePair(stateText, head, options, temperature, embedding, artifact.dim);
+        promptTokens += paired.tokens;
+        answers[id] = toAnswer(question.type, options, paired.probabilities);
+        continue;
+      }
       const embedText = embeddingInput(stateText, question);
       promptTokens += countEmbedTokens(embedText);
       const vector = await this.cache.get(embedText, async (text) => (await embedding.getEmbeddingFor(text)).vector);
       if (vector.length !== artifact.dim) {
         throw new DecideError("engine_error", `embedding dim ${vector.length} != ${artifact.dim}`, 500);
       }
-      const predicted = predictClass(vector, head, options.length);
+      const predicted = predictClass(vector, head, options.length, temperature);
       const probabilities = remapProbabilities(options, head, predicted.probabilities);
       answers[id] = toAnswer(question.type, options, probabilities);
     }
@@ -239,6 +338,60 @@ export class HeadMlpEngine implements DecisionEngine {
       usage: { prompt_tokens: promptTokens, generated_tokens: 0 },
       latency_ms: performance.now() - started
     };
+  }
+
+  private async scoreFilePair(
+    stateText: string,
+    head: ProbeHead,
+    options: OptionSpec[],
+    temperature: number,
+    embedding: LlamaEmbeddingContext,
+    dim: number
+  ): Promise<{ probabilities: Record<string, number>; tokens: number }> {
+    const yesIndex = head.classes.indexOf("yes");
+    if (yesIndex < 0) throw new DecideError("engine_error", "file pair head is missing a yes class", 500);
+    const request = requestFromFileView(stateText);
+    const scale = temperature > 0 ? temperature : 1;
+    const texts = options.map((option) => filePairInput(request, option.key));
+    const tokens = texts.reduce((sum, text) => sum + countEmbedTokens(text), 0);
+    const allCached = texts.every((text) => this.cache.has(text));
+    const vectors: number[][] = [];
+    if (allCached) {
+      for (const text of texts) {
+        vectors.push([
+          ...(await this.cache.get(text, async () => {
+            throw new DecideError("engine_error", "file pair cache miss after has()", 500);
+          }))
+        ]);
+      }
+    } else if (modelId().includes("Qwen")) {
+      // Prefix-KV verified numeric-equal on Qwen3 decoder (bench/day2-prefix-kv).
+      // Encoder MiniLM-style models diverge under adaptStateToTokens — use erase-total there.
+      await asEmbeddingInternals(embedding)._sequence.clearHistory();
+      for (const text of texts) {
+        const vector = await embedWithPrefixReuse(embedding, text);
+        this.cache.put(text, vector);
+        vectors.push(vector);
+      }
+    } else {
+      for (const text of texts) {
+        const vector = await this.cache.get(text, async (key) => (await embedding.getEmbeddingFor(key)).vector);
+        vectors.push([...vector]);
+      }
+    }
+    const yes: number[] = [];
+    for (const vector of vectors) {
+      if (vector.length !== dim) {
+        throw new DecideError("engine_error", `embedding dim ${vector.length} != ${dim}`, 500);
+      }
+      const scores = linearScores(vector, head).map((score) => score / scale);
+      yes.push(softmax(scores)[yesIndex] ?? 0);
+    }
+    const mass = yes.reduce((sum, value) => sum + value, 0);
+    const probabilities = Object.fromEntries(
+      options.map((option, i) => [option.key, mass > 0 ? (yes[i] ?? 0) / mass : 1 / options.length])
+    );
+    return { probabilities, tokens };
   }
 
   async dispose(): Promise<void> {

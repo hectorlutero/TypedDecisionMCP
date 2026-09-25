@@ -5,8 +5,10 @@ import {
   HeadMlpEngine,
   countEmbedTokens,
   embeddingInput,
+  filePairInput,
   loadHeadWeights,
-  predictClass
+  predictClass,
+  requestFromFileView
 } from "./head-mlp.js";
 
 describe("head-mlp probe", () => {
@@ -41,6 +43,13 @@ describe("EmbeddingCache", () => {
     expect(calls).toBe(3);
     expect(await cache.get("a", fetch)).toEqual([1]);
     expect(calls).toBe(4);
+  });
+
+  it("has and put track exact keys without fetch", () => {
+    const cache = new EmbeddingCache(2);
+    expect(cache.has("a")).toBe(false);
+    cache.put("a", [1, 2]);
+    expect(cache.has("a")).toBe(true);
   });
 });
 
@@ -84,6 +93,29 @@ describe("loadHeadWeights", () => {
         "unsloth/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf"
       )
     ).toThrow(DecideError);
+  });
+});
+
+describe("file pair view", () => {
+  it("reads the request out of the pack view and ignores sibling paths", () => {
+    const view = JSON.stringify({ request: "Open the port", candidates: ["src/http.ts", "LICENSE"] }, null, 2);
+    expect(requestFromFileView(view)).toBe("Open the port");
+    expect(filePairInput("Open the port", "src/http.ts")).not.toContain("LICENSE");
+  });
+
+  it("treats a weight file without fileScoring as the slot head", () => {
+    const artifact = loadHeadWeights(
+      {
+        modelId: "unsloth/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf",
+        dim: 1,
+        heads: {
+          command: { classes: ["yes", "no"], weights: [[1], [0]], bias: [0, 0] }
+        }
+      },
+      "unsloth/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf"
+    );
+    expect(artifact.fileScoring).toBe("slot");
+    expect(artifact.temperature).toBeUndefined();
   });
 });
 
