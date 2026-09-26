@@ -1,0 +1,4 @@
+{
+  "name": "TypedDecisionMCP",
+  "install": "bash scripts/instantiate-mcp.sh"
+}
